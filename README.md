@@ -101,7 +101,7 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 4 — Inventario (recepción por escaneo, ajustes, stock bajo, historial de movimientos)
 - [x] Fase 5 — Caja (apertura, retiros/entradas, corte con efectivo esperado/contado/diferencia, cierre)
 - [x] Fase 6 — POS / Ventas (carrito con escáner, pagos efectivo/tarjeta/transferencia/mixto, transacción atómica, ticket imprimible, suspender/recuperar, cancelación)
-- [ ] Fase 7 — Reportes y Dashboard
+- [x] Fase 7 — Reportes y Dashboard (KPIs del día, ventas por fecha/método/cajero, top productos, cortes de caja)
 - [ ] Fase 8 — UX (estados de carga, vacíos, errores, responsive)
 - [ ] Fase 9 — Producción (build, seguridad, despliegue)
 

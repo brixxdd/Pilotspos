@@ -5,6 +5,7 @@ import { registerProductRoutes } from "./products/routes.js";
 import { registerInventoryRoutes } from "./inventory/routes.js";
 import { registerCashRoutes } from "./cash/routes.js";
 import { registerSalesRoutes } from "./sales/routes.js";
+import { registerReportsRoutes } from "./reports/routes.js";
 
 /**
  * Punto central de registro de rutas por módulo de negocio.
@@ -22,4 +23,5 @@ export async function registerModules(app: FastifyInstance) {
   await app.register(registerInventoryRoutes);
   await app.register(registerCashRoutes);
   await app.register(registerSalesRoutes);
+  await app.register(registerReportsRoutes);
 }
