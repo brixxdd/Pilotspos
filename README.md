@@ -94,7 +94,7 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 2 — Autenticación (organizaciones, sucursales, usuarios, roles, sesiones server-side, login real, CRUD de usuarios)
 - [x] Fase 3 — Productos (categorías, códigos de barras múltiples, búsqueda por nombre/SKU/barcode, alta con escaneo)
 - [x] Fase 4 — Inventario (recepción por escaneo, ajustes, stock bajo, historial de movimientos)
-- [ ] Fase 5 — Caja
+- [x] Fase 5 — Caja (apertura, retiros/entradas, corte con efectivo esperado/contado/diferencia, cierre)
 - [ ] Fase 6 — POS / Ventas
 - [ ] Fase 7 — Reportes y Dashboard
 - [ ] Fase 8 — UX (estados de carga, vacíos, errores, responsive)
