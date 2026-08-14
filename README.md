@@ -40,20 +40,25 @@ npm install
 # 2. Configurar variables de entorno
 cp .env.example .env
 
-# 3. Levantar PostgreSQL
+# 3. Compilar los paquetes compartidos (types, validation, domain, database, ui)
+#    Requerido: apps/api y apps/web consumen su dist/, no su código fuente.
+#    Vuelve a ejecutarse cada vez que cambies algo dentro de packages/*.
+npm run build:packages
+
+# 4. Levantar PostgreSQL
 docker compose up -d postgres
 
-# 4. Generar y aplicar migraciones
+# 5. Generar y aplicar migraciones
 npm run db:generate
 npm run db:migrate
 
-# 5. Sembrar datos de desarrollo
+# 6. Sembrar datos de desarrollo
 npm run db:seed
 
-# 6. Levantar la API (puerto 3001 por defecto)
+# 7. Levantar la API (puerto 3001 por defecto)
 npm run dev:api
 
-# 7. En otra terminal, levantar el frontend (puerto 3000)
+# 8. En otra terminal, levantar el frontend (puerto 3000)
 npm run dev:web
 ```
 
@@ -95,7 +100,7 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 3 — Productos (categorías, códigos de barras múltiples, búsqueda por nombre/SKU/barcode, alta con escaneo)
 - [x] Fase 4 — Inventario (recepción por escaneo, ajustes, stock bajo, historial de movimientos)
 - [x] Fase 5 — Caja (apertura, retiros/entradas, corte con efectivo esperado/contado/diferencia, cierre)
-- [ ] Fase 6 — POS / Ventas
+- [x] Fase 6 — POS / Ventas (carrito con escáner, pagos efectivo/tarjeta/transferencia/mixto, transacción atómica, ticket imprimible, suspender/recuperar, cancelación)
 - [ ] Fase 7 — Reportes y Dashboard
 - [ ] Fase 8 — UX (estados de carga, vacíos, errores, responsive)
 - [ ] Fase 9 — Producción (build, seguridad, despliegue)

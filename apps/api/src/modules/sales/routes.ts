@@ -1,0 +1,92 @@
+import type { FastifyInstance } from "fastify";
+import { saleSchema, suspendSaleSchema } from "@pilotspos/validation";
+import { requireAuth, requirePermission } from "../../middleware/auth.js";
+import { getCurrentOpenSession } from "../cash/service.js";
+import {
+  cancelSale,
+  createSale,
+  discardSuspendedSale,
+  getSaleById,
+  listSales,
+  listSuspendedSales,
+  recoverSuspendedSale,
+  suspendSale,
+} from "./service.js";
+
+export async function registerSalesRoutes(app: FastifyInstance) {
+  app.addHook("preHandler", requireAuth);
+
+  app.post("/sales", { preHandler: requirePermission("sales.create") }, async (request, reply) => {
+    const input = saleSchema.parse(request.body);
+    const sale = await createSale(
+      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      input,
+    );
+    reply.status(201);
+    return { sale };
+  });
+
+  app.get("/sales", async (request) => {
+    return listSales(request.authContext!.organizationId, request.query as { page?: number; pageSize?: number });
+  });
+
+  app.get<{ Params: { id: string } }>("/sales/:id", async (request) => {
+    const sale = await getSaleById(request.authContext!.organizationId, request.params.id);
+    return { sale };
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/sales/:id/cancel",
+    { preHandler: requirePermission("sales.cancel") },
+    async (request) => {
+      const sale = await cancelSale(
+        { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+        request.params.id,
+      );
+      return { sale };
+    },
+  );
+
+  app.post("/sales/suspend", { preHandler: requirePermission("sales.create") }, async (request, reply) => {
+    const input = suspendSaleSchema.parse(request.body);
+    const session = await getCurrentOpenSession(
+      request.authContext!.organizationId,
+      request.authContext!.userId,
+    );
+    const suspended = await suspendSale(
+      {
+        organizationId: request.authContext!.organizationId,
+        branchId: session.branchId,
+        registerId: session.registerId,
+        userId: request.authContext!.userId,
+      },
+      input,
+    );
+    reply.status(201);
+    return { suspended };
+  });
+
+  app.get("/sales/suspended", async (request) => {
+    const items = await listSuspendedSales(
+      request.authContext!.organizationId,
+      request.authContext!.branchId,
+    );
+    return { items };
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/sales/suspended/:id/recover",
+    { preHandler: requirePermission("sales.create") },
+    async (request) => {
+      return recoverSuspendedSale(request.authContext!.organizationId, request.params.id);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    "/sales/suspended/:id",
+    { preHandler: requirePermission("sales.create") },
+    async (request) => {
+      return discardSuspendedSale(request.authContext!.organizationId, request.params.id);
+    },
+  );
+}

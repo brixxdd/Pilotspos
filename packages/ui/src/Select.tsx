@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import type { SelectHTMLAttributes } from "react";
-import { cn } from "./cn";
+import { cn } from "./cn.js";
 
 export interface SelectOption {
   value: string;

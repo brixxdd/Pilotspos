@@ -11,3 +11,19 @@ body {
   background-color: #f5f7fa;
   color: #172033;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #ticket-print-area,
+  #ticket-print-area * {
+    visibility: visible;
+  }
+  #ticket-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+  }
+}

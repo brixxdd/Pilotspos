@@ -76,6 +76,7 @@ export type PermissionAction =
   | "cash.manage"
   | "sales.create"
   | "sales.discount"
+  | "sales.cancel"
   | "reports.view"
   | "users.manage"
   | "settings.manage";
@@ -89,6 +90,7 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
     "cash.manage",
     "sales.create",
     "sales.discount",
+    "sales.cancel",
     "reports.view",
     "users.manage",
     "settings.manage",
@@ -100,6 +102,7 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
     "cash.manage",
     "sales.create",
     "sales.discount",
+    "sales.cancel",
     "reports.view",
   ],
   CASHIER: ["sales.create"],

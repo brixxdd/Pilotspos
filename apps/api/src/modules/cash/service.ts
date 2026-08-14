@@ -137,7 +137,7 @@ export async function openSession(
   return { session, summary };
 }
 
-async function getCurrentOpenSession(organizationId: string, userId: string) {
+export async function getCurrentOpenSession(organizationId: string, userId: string) {
   const [session] = await db
     .select()
     .from(schema.cashSessions)

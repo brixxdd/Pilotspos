@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { cn } from "./cn";
+import { cn } from "./cn.js";
 
 export interface ModalProps {
   open: boolean;
