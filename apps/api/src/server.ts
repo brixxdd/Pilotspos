@@ -2,6 +2,7 @@ import { env } from "./config/env.js";
 import Fastify from "fastify";
 import { registerSecurityPlugins } from "./plugins/security.js";
 import { registerErrorHandler } from "./shared/error-handler.js";
+import { authContextPlugin } from "./middleware/auth.js";
 import { registerModules } from "./modules/index.js";
 
 async function main() {
@@ -16,6 +17,7 @@ async function main() {
   });
 
   await registerSecurityPlugins(app);
+  await app.register(authContextPlugin);
   registerErrorHandler(app);
   await registerModules(app);
 

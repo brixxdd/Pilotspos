@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import type { InputHTMLAttributes } from "react";
-import { cn } from "./cn.js";
+import { cn } from "./cn";
 
 export type SearchInputProps = InputHTMLAttributes<HTMLInputElement>;
 

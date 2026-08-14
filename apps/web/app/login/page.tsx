@@ -1,4 +1,27 @@
-export default function LoginPage() {
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { LoginForm } from "./LoginForm";
+import type { BootstrapOrganization } from "./types";
+
+const API_URL = process.env.API_URL ?? "http://localhost:3001";
+
+async function getBootstrapOrganizations(): Promise<BootstrapOrganization[]> {
+  try {
+    const response = await fetch(`${API_URL}/auth/bootstrap`, { cache: "no-store" });
+    if (!response.ok) return [];
+    const body = (await response.json()) as { organizations: BootstrapOrganization[] };
+    return body.organizations;
+  } catch {
+    return [];
+  }
+}
+
+export default async function LoginPage() {
+  const session = await getSession();
+  if (session) redirect("/dashboard");
+
+  const organizations = await getBootstrapOrganizations();
+
   return (
     <div className="flex min-h-screen">
       <div className="hidden w-1/2 flex-col justify-between bg-navy p-12 text-white lg:flex">
@@ -20,9 +43,15 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted">
             Ingresa tus credenciales para acceder a PilotsPOS.
           </p>
-          <p className="mt-6 text-sm text-muted">
-            El formulario de acceso se conecta con la API en la Fase 2 de la reconstrucción.
-          </p>
+          <div className="mt-6">
+            <LoginForm organizations={organizations} />
+          </div>
+          <div className="mt-8 flex justify-between border-t border-line pt-4 text-xs text-muted">
+            <span>Servidor API</span>
+            <span className={organizations.length > 0 ? "text-success" : "text-danger"}>
+              {organizations.length > 0 ? "Conectado" : "Sin conexión"}
+            </span>
+          </div>
         </div>
       </div>
     </div>

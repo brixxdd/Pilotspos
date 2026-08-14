@@ -1,4 +1,6 @@
 import type { FastifyInstance } from "fastify";
+import { registerAuthRoutes } from "./auth/routes.js";
+import { registerUserRoutes } from "./users/routes.js";
 
 /**
  * Punto central de registro de rutas por módulo de negocio.
@@ -6,4 +8,10 @@ import type { FastifyInstance } from "fastify";
  */
 export async function registerModules(app: FastifyInstance) {
   app.get("/health", async () => ({ status: "ok", service: "pilotspos-api" }));
+
+  // Cada módulo se registra en su propio contexto encapsulado de Fastify:
+  // los hooks (p. ej. requireAuth/requireRole) que un módulo añade a `app`
+  // solo aplican dentro de ese módulo, nunca al resto de la API.
+  await app.register(registerAuthRoutes);
+  await app.register(registerUserRoutes);
 }

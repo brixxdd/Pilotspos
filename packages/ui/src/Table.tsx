@@ -1,5 +1,5 @@
 import type { ReactNode, TableHTMLAttributes } from "react";
-import { cn } from "./cn.js";
+import { cn } from "./cn";
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
   return (
