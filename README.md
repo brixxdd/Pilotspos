@@ -103,9 +103,9 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 6 — POS / Ventas (carrito con escáner, pagos efectivo/tarjeta/transferencia/mixto, transacción atómica, ticket imprimible, suspender/recuperar, cancelación)
 - [x] Fase 7 — Reportes y Dashboard (KPIs del día, ventas por fecha/método/cajero, top productos, cortes de caja)
 - [x] Fase 8 — UX (loading states, error boundaries, banner offline, sidebar responsive, Configuración)
-- [ ] Fase 9 — Producción (build, seguridad, despliegue)
+- [x] Fase 9 — Producción (documentación completa, checklist de seguridad, guía de build/deploy)
 
-Ver `ARCHITECTURE.md`, `DATABASE.md`, `API.md` y `DEVELOPMENT.md` para más detalle (se completan en la Fase 9).
+Documentación adicional: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (arquitectura y decisiones), [`DATABASE.md`](./DATABASE.md) (schema y migraciones), [`API.md`](./API.md) (referencia de endpoints), [`DEVELOPMENT.md`](./DEVELOPMENT.md) (setup, variables de entorno, checklist de seguridad, guía de producción).
 
 ## Seguridad
 
