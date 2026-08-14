@@ -11,7 +11,7 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-MX", {
   minute: "2-digit",
 });
 
-export function Header({ user }: { user: SessionUser }) {
+export function Header({ user, onMenuClick }: { user: SessionUser; onMenuClick?: () => void }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -21,11 +21,23 @@ export function Header({ user }: { user: SessionUser }) {
   }, []);
 
   return (
-    <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line bg-white px-6">
-      <div className="text-sm text-muted">
-        Cajero: <span className="font-medium text-ink">{user.fullName}</span>
+    <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-line bg-white px-4 sm:px-6">
+      <div className="flex items-center gap-3">
+        {onMenuClick ? (
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="text-ink lg:hidden"
+            aria-label="Abrir menú"
+          >
+            ☰
+          </button>
+        ) : null}
+        <div className="text-sm text-muted">
+          Cajero: <span className="font-medium text-ink">{user.fullName}</span>
+        </div>
       </div>
-      <div className="text-sm text-muted">{now ? DATE_FORMATTER.format(now) : ""}</div>
+      <div className="hidden text-sm text-muted sm:block">{now ? DATE_FORMATTER.format(now) : ""}</div>
     </header>
   );
 }

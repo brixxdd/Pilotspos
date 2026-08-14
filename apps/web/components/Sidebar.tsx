@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Configuración" },
 ];
 
-export function Sidebar({ user }: { user: SessionUser }) {
+export function Sidebar({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
   return (
     <aside className="flex h-screen w-60 flex-shrink-0 flex-col justify-between bg-navy-dark">
       <div>
@@ -28,7 +28,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
           <p className="mt-1 text-xs text-white/60">{user.organizationName}</p>
           {user.branchName ? <p className="text-xs text-white/40">{user.branchName}</p> : null}
         </div>
-        <nav className="flex flex-col gap-1 px-3">
+        <nav className="flex flex-col gap-1 px-3" onClick={onNavigate}>
           {NAV_ITEMS.map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
