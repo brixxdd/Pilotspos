@@ -1,0 +1,35 @@
+{
+  "name": "@pilotspos/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@pilotspos/database": "*",
+    "@pilotspos/domain": "*",
+    "@pilotspos/types": "*",
+    "@pilotspos/validation": "*",
+    "fastify": "^5.12.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/sensible": "^6.0.5",
+    "@fastify/rate-limit": "^11.2.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.15",
+    "@types/bcryptjs": "^2.4.6",
+    "tsx": "^4.16.5",
+    "typescript": "^5.5.4",
+    "pino-pretty": "^11.2.2"
+  }
+}
