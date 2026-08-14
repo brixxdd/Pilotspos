@@ -93,7 +93,7 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 1 — Fundación (monorepo, Next.js, Fastify, PostgreSQL, Drizzle, Docker, packages, ESLint, Git)
 - [x] Fase 2 — Autenticación (organizaciones, sucursales, usuarios, roles, sesiones server-side, login real, CRUD de usuarios)
 - [x] Fase 3 — Productos (categorías, códigos de barras múltiples, búsqueda por nombre/SKU/barcode, alta con escaneo)
-- [ ] Fase 4 — Inventario
+- [x] Fase 4 — Inventario (recepción por escaneo, ajustes, stock bajo, historial de movimientos)
 - [ ] Fase 5 — Caja
 - [ ] Fase 6 — POS / Ventas
 - [ ] Fase 7 — Reportes y Dashboard
