@@ -24,37 +24,39 @@ export default async function LoginPage() {
   const organizations = await getBootstrapOrganizations();
 
   return (
-    <div className="flex min-h-screen">
-      <div className="hidden w-1/2 flex-col justify-between bg-navy p-12 text-white lg:flex">
-        <div>
-          <Image src="/logo.png" alt="PilotsPOS" width={56} height={56} className="rounded-xl" priority />
-          <p className="mt-4 text-2xl font-semibold">PilotsPOS</p>
-          <p className="mt-1 text-sm text-white/70">Punto de venta Web SaaS</p>
-        </div>
-        <div className="space-y-2 text-sm text-white/80">
-          <p>Plataforma cloud</p>
-          <p>Multiempresa</p>
-          <p>Acceso seguro con cookies HTTP-only</p>
-        </div>
-        <p className="text-xs text-white/50">DevPilots · PilotsPOS</p>
-      </div>
-
-      <div className="flex w-full flex-1 items-center justify-center bg-app p-8 lg:w-1/2">
+    <div className="flex min-h-screen bg-white">
+      <div className="flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-sm">
-          <h1 className="text-xl font-semibold text-ink">Iniciar sesión</h1>
-          <p className="mt-1 text-sm text-muted">
-            Ingresa tus credenciales para acceder a PilotsPOS.
-          </p>
-          <div className="mt-6">
+          <div className="flex flex-col items-center text-center">
+            <Image src="/logo.png" alt="PilotsPOS" width={64} height={64} className="rounded-2xl" priority />
+            <h1 className="mt-6 text-2xl font-semibold text-ink">Bienvenido de nuevo</h1>
+            <p className="mt-2 text-sm text-muted">Ingresa tus credenciales para acceder a PilotsPOS.</p>
+          </div>
+
+          <div className="mt-8">
             <LoginForm organizations={organizations} />
           </div>
+
           <div className="mt-8 flex justify-between border-t border-line pt-4 text-xs text-muted">
             <span>Servidor API</span>
             <span className={organizations.length > 0 ? "text-success" : "text-danger"}>
               {organizations.length > 0 ? "Conectado" : "Sin conexión"}
             </span>
           </div>
+
+          <p className="mt-6 text-center text-xs text-muted">DevPilots · PilotsPOS</p>
         </div>
+      </div>
+
+      <div className="relative hidden w-1/2 lg:block">
+        <Image
+          src="/login-visual.jpg"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+        />
       </div>
     </div>
   );
