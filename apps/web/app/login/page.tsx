@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { getSession } from "@/lib/session";
 import { LoginForm } from "./LoginForm";
 import type { BootstrapOrganization } from "./types";
@@ -26,7 +27,8 @@ export default async function LoginPage() {
     <div className="flex min-h-screen">
       <div className="hidden w-1/2 flex-col justify-between bg-navy p-12 text-white lg:flex">
         <div>
-          <p className="text-2xl font-semibold">PilotsPOS</p>
+          <Image src="/logo.png" alt="PilotsPOS" width={56} height={56} className="rounded-xl" priority />
+          <p className="mt-4 text-2xl font-semibold">PilotsPOS</p>
           <p className="mt-1 text-sm text-white/70">Punto de venta Web SaaS</p>
         </div>
         <div className="space-y-2 text-sm text-white/80">
