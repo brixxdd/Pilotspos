@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { UserRole } from "@pilotspos/types";
+import { canPerformAction, type PermissionAction } from "@pilotspos/domain";
 import { env } from "../config/env.js";
 import { resolveSession } from "../modules/auth/session.service.js";
 import { ForbiddenError, UnauthorizedError } from "../shared/errors.js";
@@ -42,6 +43,18 @@ export function requireRole(...roles: UserRole[]) {
       throw new UnauthorizedError();
     }
     if (!roles.includes(request.authContext.role)) {
+      throw new ForbiddenError();
+    }
+  };
+}
+
+/** Autorización basada en la matriz de permisos de @pilotspos/domain (única fuente de verdad). */
+export function requirePermission(action: PermissionAction) {
+  return async (request: FastifyRequest, _reply: FastifyReply) => {
+    if (!request.authContext) {
+      throw new UnauthorizedError();
+    }
+    if (!canPerformAction(request.authContext.role, action)) {
       throw new ForbiddenError();
     }
   };

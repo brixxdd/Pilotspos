@@ -1,5 +1,34 @@
-import { ComingSoon } from "@/components/ComingSoon";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getSession } from "@/lib/session";
+import { ProductsClient } from "./ProductsClient";
+import type { CategoryRow, ProductRow } from "./types";
 
-export default function ProductsPage() {
-  return <ComingSoon title="Productos" phase="la Fase 3 (Productos)" />;
+const API_URL = process.env.API_URL ?? "http://localhost:3001";
+
+async function apiGet<T>(path: string): Promise<T | null> {
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: { cookie: cookies().toString() },
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  return response.json() as Promise<T>;
+}
+
+export default async function ProductsPage() {
+  const user = await getSession();
+  if (!user) redirect("/login");
+
+  const [productsResult, categoriesResult] = await Promise.all([
+    apiGet<{ items: ProductRow[] }>("/products?pageSize=100"),
+    apiGet<{ categories: CategoryRow[] }>("/categories"),
+  ]);
+
+  return (
+    <ProductsClient
+      initialProducts={productsResult?.items ?? []}
+      categories={categoriesResult?.categories ?? []}
+      role={user.role}
+    />
+  );
 }
