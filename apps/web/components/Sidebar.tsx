@@ -1,6 +1,16 @@
 import type { SessionUser } from "@pilotspos/types";
 import { NavLink } from "./NavLink";
 import { LogoutButton } from "./LogoutButton";
+import {
+  BoxesIcon,
+  CartIcon,
+  ChartIcon,
+  HomeIcon,
+  PackageIcon,
+  SettingsIcon,
+  UsersIcon,
+  WalletIcon,
+} from "./icons";
 
 const ROLE_LABELS: Record<SessionUser["role"], string> = {
   ADMIN: "Administrador",
@@ -9,14 +19,14 @@ const ROLE_LABELS: Record<SessionUser["role"], string> = {
 };
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Inicio" },
-  { href: "/sales", label: "Ventas" },
-  { href: "/products", label: "Productos" },
-  { href: "/inventory", label: "Inventario" },
-  { href: "/cash", label: "Caja" },
-  { href: "/reports", label: "Reportes" },
-  { href: "/users", label: "Usuarios" },
-  { href: "/settings", label: "Configuración" },
+  { href: "/dashboard", label: "Inicio", icon: HomeIcon },
+  { href: "/sales", label: "Ventas", icon: CartIcon },
+  { href: "/products", label: "Productos", icon: PackageIcon },
+  { href: "/inventory", label: "Inventario", icon: BoxesIcon },
+  { href: "/cash", label: "Caja", icon: WalletIcon },
+  { href: "/reports", label: "Reportes", icon: ChartIcon },
+  { href: "/users", label: "Usuarios", icon: UsersIcon },
+  { href: "/settings", label: "Configuración", icon: SettingsIcon },
 ];
 
 export function Sidebar({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
@@ -30,7 +40,7 @@ export function Sidebar({ user, onNavigate }: { user: SessionUser; onNavigate?: 
         </div>
         <nav className="flex flex-col gap-1 px-3" onClick={onNavigate}>
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} href={item.href}>
+            <NavLink key={item.href} href={item.href} icon={item.icon}>
               {item.label}
             </NavLink>
           ))}
