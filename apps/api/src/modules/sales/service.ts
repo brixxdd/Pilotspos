@@ -9,6 +9,7 @@ import {
 import type { CartItem } from "@pilotspos/types";
 import { db, schema } from "../../shared/db.js";
 import { AppError, NotFoundError } from "../../shared/errors.js";
+import { nextCounterValue } from "../../shared/counters.js";
 import { getCurrentOpenSession } from "../cash/service.js";
 import type { SaleInput, SuspendSaleInput } from "@pilotspos/validation";
 
@@ -49,12 +50,29 @@ function generateSaleNumber(sequence: number): string {
 export async function createSale(
   params: { organizationId: string; userId: string },
   input: SaleInput,
+  options: { allowNegativeStock?: boolean } = {},
 ) {
+  if (input.clientSaleId) {
+    const [existing] = await db
+      .select({ id: schema.sales.id })
+      .from(schema.sales)
+      .where(
+        and(
+          eq(schema.sales.organizationId, params.organizationId),
+          eq(schema.sales.clientSaleId, input.clientSaleId),
+        ),
+      )
+      .limit(1);
+    // Reintento de una venta que ya se sincronizó: se devuelve la venta
+    // existente en vez de crear un duplicado (ver nextCounterValue / offline sync).
+    if (existing) return getSaleById(params.organizationId, existing.id);
+  }
+
   const session = await getCurrentOpenSession(params.organizationId, params.userId);
 
   const { cartItems } = await loadCartItems(params.organizationId, input.items);
 
-  const validation = validateCart(cartItems);
+  const validation = validateCart(cartItems, { allowNegativeStock: options.allowNegativeStock });
   if (!validation.valid) {
     throw new AppError(
       "El carrito contiene productos sin stock suficiente o con cantidad inválida",
@@ -85,11 +103,7 @@ export async function createSale(
   });
 
   const sale = await db.transaction(async (tx) => {
-    const saleCountRows = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(schema.sales)
-      .where(eq(schema.sales.organizationId, params.organizationId));
-    const count = saleCountRows[0]?.count ?? 0;
+    const sequence = await nextCounterValue(tx, params.organizationId, "sale");
 
     const [createdSale] = await tx
       .insert(schema.sales)
@@ -99,11 +113,12 @@ export async function createSale(
         registerId: session.registerId,
         cashSessionId: session.id,
         userId: params.userId,
-        saleNumber: generateSaleNumber(count + 1),
+        saleNumber: generateSaleNumber(sequence),
         subtotal: subtotal.toFixed(2),
         discount: discount.toFixed(2),
         total: total.toFixed(2),
         status: "COMPLETED",
+        clientSaleId: input.clientSaleId ?? null,
       })
       .returning();
     if (!createdSale) throw new Error("No se pudo crear la venta");
@@ -120,10 +135,14 @@ export async function createSale(
         subtotal: itemSubtotal.toFixed(2),
       });
 
+      const stockCondition = options.allowNegativeStock
+        ? eq(schema.products.id, item.productId)
+        : and(eq(schema.products.id, item.productId), gte(schema.products.stock, item.quantity));
+
       const [updatedProduct] = await tx
         .update(schema.products)
         .set({ stock: sql`${schema.products.stock} - ${item.quantity}`, updatedAt: new Date() })
-        .where(and(eq(schema.products.id, item.productId), gte(schema.products.stock, item.quantity)))
+        .where(stockCondition)
         .returning({ id: schema.products.id });
       if (!updatedProduct) {
         throw new AppError(`Stock insuficiente para ${item.name}`, 409, "OUT_OF_STOCK");
@@ -293,25 +312,25 @@ export async function suspendSale(
 ) {
   const { cartItems } = await loadCartItems(params.organizationId, input.items);
 
-  const suspendedCountRows = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.suspendedSales)
-    .where(eq(schema.suspendedSales.organizationId, params.organizationId));
-  const count = suspendedCountRows[0]?.count ?? 0;
+  const created = await db.transaction(async (tx) => {
+    const sequence = await nextCounterValue(tx, params.organizationId, "suspended_sale");
 
-  const [created] = await db
-    .insert(schema.suspendedSales)
-    .values({
-      organizationId: params.organizationId,
-      branchId: params.branchId,
-      registerId: params.registerId,
-      userId: params.userId,
-      saleNumber: `S-${String(count + 1).padStart(5, "0")}`,
-      items: cartItems,
-      discount: input.discount.toFixed(2),
-      note: input.note ?? null,
-    })
-    .returning();
+    const [row] = await tx
+      .insert(schema.suspendedSales)
+      .values({
+        organizationId: params.organizationId,
+        branchId: params.branchId,
+        registerId: params.registerId,
+        userId: params.userId,
+        saleNumber: `S-${String(sequence).padStart(5, "0")}`,
+        items: cartItems,
+        discount: input.discount.toFixed(2),
+        note: input.note ?? null,
+      })
+      .returning();
+    if (!row) throw new Error("No se pudo crear la venta suspendida");
+    return row;
+  });
 
   return created;
 }

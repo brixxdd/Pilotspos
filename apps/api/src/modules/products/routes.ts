@@ -5,6 +5,7 @@ import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import {
   createProduct,
   deactivateProduct,
+  getCatalogSnapshot,
   getProductByBarcode,
   getProductById,
   listProducts,
@@ -25,6 +26,12 @@ export async function registerProductRoutes(app: FastifyInstance) {
   app.get("/products", async (request) => {
     const query = listQuerySchema.parse(request.query);
     return listProducts(request.authContext!.organizationId, query);
+  });
+
+  // Snapshot plano sin paginar, para que el cliente pueble su caché offline (ver apps/web/lib/catalog-sync.ts).
+  app.get("/products/catalog", async (request) => {
+    const items = await getCatalogSnapshot(request.authContext!.organizationId);
+    return { items };
   });
 
   app.get("/products/barcode/:barcode", async (request) => {

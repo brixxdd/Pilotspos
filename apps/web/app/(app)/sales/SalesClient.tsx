@@ -10,6 +10,8 @@ import {
 import type { PaymentMethod, UserRole } from "@pilotspos/types";
 import { Alert, Badge, Button, Input, Modal, PageHeader, Select } from "@pilotspos/ui";
 import { apiFetch, ApiClientError } from "@/lib/api-client";
+import { lookupCachedProductByBarcode, searchCachedProducts } from "@/lib/offline-catalog";
+import { queueOfflineSale } from "@/lib/offline-queue";
 import { TicketModal } from "./TicketModal";
 import type { CartLine, ProductLookup, SaleTicket, SuspendedSaleRow } from "./types";
 
@@ -76,6 +78,17 @@ export function SalesClient({ role }: { role: UserRole }) {
       setBarcode("");
       setSearchResults([]);
     } catch (err) {
+      if (err instanceof ApiClientError && err.code === "NETWORK_ERROR") {
+        const offlineProduct = await lookupCachedProductByBarcode(code);
+        if (offlineProduct) {
+          addToCart(offlineProduct);
+          setBarcode("");
+          setSearchResults([]);
+          return;
+        }
+        setError("Sin conexión: ese código no está en el catálogo guardado en este equipo");
+        return;
+      }
       setError(err instanceof ApiClientError ? err.message : "No se pudo buscar el producto");
     }
   }
@@ -92,7 +105,11 @@ export function SalesClient({ role }: { role: UserRole }) {
           `/products?search=${encodeURIComponent(query)}&onlyActive=true&pageSize=6`,
         );
         setSearchResults(items);
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiClientError && err.code === "NETWORK_ERROR") {
+          setSearchResults(await searchCachedProducts(query));
+          return;
+        }
         setSearchResults([]);
       }
     }, 250);
@@ -158,7 +175,21 @@ export function SalesClient({ role }: { role: UserRole }) {
       setLastSale(sale);
       resetSale();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "No se pudo completar la venta");
+      if (err instanceof ApiClientError && err.code === "NETWORK_ERROR") {
+        try {
+          const ticket = await queueOfflineSale({
+            items: cart.map((l) => ({ productId: l.productId, name: l.name, unitPrice: l.unitPrice, quantity: l.quantity })),
+            discountInput: discount,
+            payments,
+          });
+          setLastSale(ticket);
+          resetSale();
+        } catch {
+          setError("Sin conexión: no se pudo guardar la venta en este equipo");
+        }
+      } else {
+        setError(err instanceof ApiClientError ? err.message : "No se pudo completar la venta");
+      }
     } finally {
       setSubmitting(false);
     }

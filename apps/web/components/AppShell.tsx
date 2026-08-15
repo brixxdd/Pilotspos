@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { SessionUser } from "@pilotspos/types";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { OfflineBanner } from "./OfflineBanner";
+import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 import { cn } from "@pilotspos/ui";
+import { startCatalogSync } from "@/lib/catalog-sync";
+import { startOfflineSalesSync } from "@/lib/offline-queue";
 
 export function AppShell({ user, children }: { user: SessionUser; children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    const stopCatalogSync = startCatalogSync();
+    const stopSalesSync = startOfflineSalesSync();
+    return () => {
+      stopCatalogSync();
+      stopSalesSync();
+    };
+  }, []);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-app">
+      <ServiceWorkerRegister />
       <OfflineBanner />
       <div className="flex flex-1 overflow-hidden">
         {mobileOpen ? (

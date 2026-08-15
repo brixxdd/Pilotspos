@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { saleSchema, suspendSaleSchema } from "@pilotspos/validation";
+import { saleSchema, suspendSaleSchema, syncSaleSchema } from "@pilotspos/validation";
 import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import { getCurrentOpenSession } from "../cash/service.js";
 import {
@@ -21,6 +21,21 @@ export async function registerSalesRoutes(app: FastifyInstance) {
     const sale = await createSale(
       { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
       input,
+    );
+    reply.status(201);
+    return { sale };
+  });
+
+  // Usada por la cola de sincronización offline del cliente (ver apps/web/lib/offline-queue.ts).
+  // A diferencia de POST /sales: exige clientSaleId (reintentos idempotentes) y permite que el
+  // stock quede negativo — la venta ya ocurrió físicamente mientras la caja estaba sin conexión,
+  // así que rechazarla dejaría efectivo en caja sin una venta que lo respalde.
+  app.post("/sales/sync", { preHandler: requirePermission("sales.create") }, async (request, reply) => {
+    const input = syncSaleSchema.parse(request.body);
+    const sale = await createSale(
+      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      input,
+      { allowNegativeStock: true },
     );
     reply.status(201);
     return { sale };

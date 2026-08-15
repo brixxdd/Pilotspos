@@ -137,8 +137,16 @@ export const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "El carrito está vacío"),
   discount: z.number().nonnegative().default(0),
   payments: z.array(paymentSchema).min(1, "Agrega al menos un método de pago"),
+  /** UUID generado por el cliente. Presente solo al sincronizar una venta cerrada sin conexión. */
+  clientSaleId: z.string().uuid().optional(),
 });
 export type SaleInput = z.infer<typeof saleSchema>;
+
+/** Igual que `saleSchema`, pero exige `clientSaleId` — usado por /sales/sync para reintentos idempotentes. */
+export const syncSaleSchema = saleSchema.extend({
+  clientSaleId: z.string().uuid(),
+});
+export type SyncSaleInput = z.infer<typeof syncSaleSchema>;
 
 export const suspendSaleSchema = z.object({
   registerId: z.string().uuid(),

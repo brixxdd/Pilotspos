@@ -42,6 +42,12 @@ export const sales = pgTable(
     discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
     total: numeric("total", { precision: 12, scale: 2 }).notNull(),
     status: saleStatusEnum("status").notNull().default("COMPLETED"),
+    /**
+     * UUID generado por el cliente para ventas que se cerraron sin conexión.
+     * Permite reintentar la sincronización sin duplicar la venta si la
+     * respuesta del primer intento se perdió (ver apps/api/.../sales/service.ts).
+     */
+    clientSaleId: uuid("client_sale_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -49,6 +55,7 @@ export const sales = pgTable(
     index("sales_branch_id_idx").on(table.branchId),
     index("sales_created_at_idx").on(table.createdAt),
     uniqueIndex("sales_org_sale_number_idx").on(table.organizationId, table.saleNumber),
+    uniqueIndex("sales_org_client_sale_id_idx").on(table.organizationId, table.clientSaleId),
   ],
 );
 

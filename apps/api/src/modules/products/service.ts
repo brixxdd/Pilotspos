@@ -99,6 +99,43 @@ export async function listProducts(
   return { items, total: count, page, pageSize };
 }
 
+/**
+ * Snapshot plano de todo el catálogo activo, sin paginar. Lo consume el
+ * cliente para poblar su caché local (IndexedDB) y poder seguir vendiendo
+ * por código de barras si se corta la conexión — ver apps/web/lib/catalog-sync.ts.
+ */
+export async function getCatalogSnapshot(organizationId: string) {
+  const rows = await db
+    .select({
+      id: schema.products.id,
+      name: schema.products.name,
+      price: schema.products.price,
+      stock: schema.products.stock,
+      minimumStock: schema.products.minimumStock,
+    })
+    .from(schema.products)
+    .where(and(eq(schema.products.organizationId, organizationId), eq(schema.products.active, true)))
+    .orderBy(asc(schema.products.name));
+
+  const barcodeRows = await db
+    .select({ productId: schema.productBarcodes.productId, barcode: schema.productBarcodes.barcode })
+    .from(schema.productBarcodes)
+    .innerJoin(schema.products, eq(schema.products.id, schema.productBarcodes.productId))
+    .where(eq(schema.products.organizationId, organizationId));
+
+  const barcodesByProduct = new Map<string, string[]>();
+  for (const row of barcodeRows) {
+    const list = barcodesByProduct.get(row.productId) ?? [];
+    list.push(row.barcode);
+    barcodesByProduct.set(row.productId, list);
+  }
+
+  return rows.map((product) => ({
+    ...product,
+    barcodes: barcodesByProduct.get(product.id) ?? [],
+  }));
+}
+
 export async function getProductById(organizationId: string, id: string) {
   const [row] = await db
     .select({

@@ -47,8 +47,18 @@ export interface CartValidationResult {
   errors: CartValidationError[];
 }
 
-/** Valida que cada línea del carrito tenga cantidad positiva y stock suficiente. */
-export function validateCart(items: CartItem[]): CartValidationResult {
+/**
+ * Valida que cada línea del carrito tenga cantidad positiva y stock suficiente.
+ *
+ * `allowNegativeStock` omite la validación de stock suficiente: se usa
+ * únicamente al sincronizar ventas cerradas sin conexión, donde el cobro ya
+ * ocurrió físicamente y rechazar la venta dejaría dinero en caja sin una
+ * venta que lo respalde. La cantidad sigue debiendo ser un entero positivo.
+ */
+export function validateCart(
+  items: CartItem[],
+  options: { allowNegativeStock?: boolean } = {},
+): CartValidationResult {
   const errors: CartValidationError[] = [];
 
   for (const item of items) {
@@ -56,7 +66,7 @@ export function validateCart(items: CartItem[]): CartValidationResult {
       errors.push({ productId: item.productId, reason: "INVALID_QUANTITY" });
       continue;
     }
-    if (item.quantity > item.stock) {
+    if (!options.allowNegativeStock && item.quantity > item.stock) {
       errors.push({ productId: item.productId, reason: "OUT_OF_STOCK" });
     }
   }

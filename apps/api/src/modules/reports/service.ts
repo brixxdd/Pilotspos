@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { db, schema } from "../../shared/db.js";
 
 export interface DateRange {
@@ -127,13 +127,31 @@ export async function getCashReport(organizationId: string, range: DateRange) {
     .orderBy(desc(schema.cashSessions.closedAt));
 }
 
+async function getWeekSalesTrend(organizationId: string, startOfToday: Date) {
+  const start = new Date(startOfToday);
+  start.setDate(start.getDate() - 6);
+
+  const { byDay } = await getSalesReport(organizationId, { from: start });
+  const totalsByDay = new Map(byDay.map((row) => [row.day, row.total]));
+
+  const trend: number[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = new Date(startOfToday);
+    day.setDate(day.getDate() - i);
+    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    trend.push(totalsByDay.get(key) ?? 0);
+  }
+  return trend;
+}
+
 export async function getDashboard(organizationId: string) {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const [todaySummary, topToday] = await Promise.all([
+  const [todaySummary, topToday, weekSalesTrend] = await Promise.all([
     getSalesReport(organizationId, { from: startOfToday }),
     getTopProducts(organizationId, { from: startOfToday }, 5),
+    getWeekSalesTrend(organizationId, startOfToday),
   ]);
 
   const productsSoldToday = topToday.reduce((sum, item) => sum + item.quantity, 0);
@@ -175,6 +193,20 @@ export async function getDashboard(organizationId: string) {
     .from(schema.cashSessions)
     .where(and(eq(schema.cashSessions.organizationId, organizationId), eq(schema.cashSessions.status, "OPEN")));
 
+  // Puede ocurrir cuando dos cajas venden el mismo producto sin conexión y,
+  // al sincronizar, la suma deja el stock por debajo de cero (ver
+  // allowNegativeStock en sales/service.ts). Se muestra para que un admin lo revise.
+  const negativeStockProducts = await db
+    .select({
+      id: schema.products.id,
+      name: schema.products.name,
+      stock: schema.products.stock,
+    })
+    .from(schema.products)
+    .where(and(eq(schema.products.organizationId, organizationId), lt(schema.products.stock, 0)))
+    .orderBy(asc(schema.products.stock))
+    .limit(10);
+
   return {
     todaySales: todaySummary.totalSales,
     todayTransactions: todaySummary.transactionCount,
@@ -183,7 +215,9 @@ export async function getDashboard(organizationId: string) {
     topProductsToday: topToday,
     recentSales,
     lowStockProducts,
+    negativeStockProducts,
     openCashSessions: openSessionsRows[0]?.openSessions ?? 0,
+    weekSalesTrend,
   };
 }
 
