@@ -28,4 +28,9 @@ Thumbs.db
 .idea/
 
 # Drizzle
-packages/database/drizzle/meta/
+# `packages/database/drizzle/meta/` NO se ignora: `_journal.json` es el índice
+# que Drizzle necesita para saber qué migraciones existen y en qué orden —
+# sin él el migrador aborta con "Can't find meta/_journal.json". Los
+# `*_snapshot.json` son la base sobre la que `drizzle-kit generate` calcula el
+# diff de la siguiente migración; sin ellos, generar desde un clon limpio
+# produciría una migración que recrea todo el esquema.
