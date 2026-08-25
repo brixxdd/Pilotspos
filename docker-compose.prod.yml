@@ -1,0 +1,79 @@
+# Corte POS en producción. Se despliega en /opt/corte-pos del VPS, detrás del
+# Nginx del host que ya sirve a los demás proyectos.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Los puertos publicados van SIEMPRE a 127.0.0.1: la única puerta de entrada
+# desde internet es Nginx. Postgres no publica puerto en absoluto.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: corte-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Sin `ports`: solo se llega por la red interna de Docker. El 5433 del host
+    # además ya lo tiene gymflow-postgres-prod.
+    volumes:
+      - corte_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [corte]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: corte-api-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: 3011
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-pilotspos_session}
+      CUSTOMER_COOKIE_NAME: ${CUSTOMER_COOKIE_NAME:-pilotspos_customer}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
+      CORS_ORIGIN: ${PUBLIC_ORIGIN}
+      # Detrás de Nginx: sin esto el rate limiting ve una sola IP para todos y
+      # el registro de clientes queda inservible.
+      TRUST_PROXY: "true"
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [corte]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web-corte/Dockerfile
+      args:
+        # Debe coincidir con el nombre del servicio `api` en esta red.
+        API_URL: http://api:3011
+    container_name: corte-web-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-side, contenedor a contenedor por la red interna.
+      API_URL: http://api:3011
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Corte}
+      MENU_WHATSAPP_NUMBER: ${MENU_WHATSAPP_NUMBER}
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3007}:3100"
+    depends_on: [api]
+    networks: [corte]
+
+volumes:
+  corte_postgres_data:
+
+networks:
+  corte:
+    name: corte-pos

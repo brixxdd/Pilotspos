@@ -14,6 +14,12 @@ const apiUrl = process.env.API_URL ?? "http://localhost:3001";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Empaqueta el servidor con solo las dependencias que realmente usa, para
+  // que la imagen de Docker no cargue con todo node_modules del monorepo.
+  output: "standalone",
+  // El rastreo de archivos tiene que arrancar en la raíz del monorepo o
+  // Next no encuentra los paquetes @pilotspos/* que viven fuera de la app.
+  outputFileTracingRoot: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."),
   experimental: {
     // Next 14.2 guarda en el cliente la respuesta de las páginas dinámicas
     // durante 30s. Aquí eso significa entrar a la cuenta y que el menú te

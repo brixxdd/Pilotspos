@@ -8,6 +8,7 @@ import { registerModules } from "./modules/index.js";
 
 async function main() {
   const app = Fastify({
+    trustProxy: env.TRUST_PROXY,
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
       transport:
