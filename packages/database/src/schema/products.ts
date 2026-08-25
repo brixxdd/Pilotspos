@@ -1,8 +1,8 @@
 import {
   boolean,
   index,
-  integer,
   numeric,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -40,6 +40,9 @@ export const suppliers = pgTable(
   (table) => [index("suppliers_organization_id_idx").on(table.organizationId)],
 );
 
+/** Ver `ProductUnit` en @pilotspos/types. `LB` = venta por libra con 3 decimales. */
+export const productUnitEnum = pgEnum("product_unit", ["UNIT", "LB"]);
+
 export const products = pgTable(
   "products",
   {
@@ -52,8 +55,10 @@ export const products = pgTable(
     sku: text("sku").notNull(),
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     cost: numeric("cost", { precision: 12, scale: 2 }).notNull().default("0"),
-    stock: integer("stock").notNull().default(0),
-    minimumStock: integer("minimum_stock").notNull().default(0),
+    unit: productUnitEnum("unit").notNull().default("UNIT"),
+    // numeric, no integer: un producto por libra puede tener 12.750 lb en existencia.
+    stock: numeric("stock", { precision: 12, scale: 3 }).notNull().default("0"),
+    minimumStock: numeric("minimum_stock", { precision: 12, scale: 3 }).notNull().default("0"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     supplierId: uuid("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
     active: boolean("active").notNull().default(true),

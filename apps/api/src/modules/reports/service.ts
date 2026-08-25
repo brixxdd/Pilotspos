@@ -203,7 +203,7 @@ export async function getDashboard(organizationId: string) {
       stock: schema.products.stock,
     })
     .from(schema.products)
-    .where(and(eq(schema.products.organizationId, organizationId), lt(schema.products.stock, 0)))
+    .where(and(eq(schema.products.organizationId, organizationId), lt(schema.products.stock, "0")))
     .orderBy(asc(schema.products.stock))
     .limit(10);
 

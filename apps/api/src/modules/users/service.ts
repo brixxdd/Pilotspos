@@ -18,8 +18,9 @@ const SAFE_COLUMNS = {
 
 export async function listUsers(organizationId: string) {
   return db
-    .select(SAFE_COLUMNS)
+    .select({ ...SAFE_COLUMNS, branchName: schema.branches.name })
     .from(schema.users)
+    .leftJoin(schema.branches, eq(schema.branches.id, schema.users.branchId))
     .where(eq(schema.users.organizationId, organizationId))
     .orderBy(asc(schema.users.fullName));
 }

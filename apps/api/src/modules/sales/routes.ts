@@ -19,7 +19,11 @@ export async function registerSalesRoutes(app: FastifyInstance) {
   app.post("/sales", { preHandler: requirePermission("sales.create") }, async (request, reply) => {
     const input = saleSchema.parse(request.body);
     const sale = await createSale(
-      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      {
+        organizationId: request.authContext!.organizationId,
+        userId: request.authContext!.userId,
+        branchId: request.authContext!.branchId,
+      },
       input,
     );
     reply.status(201);
@@ -33,7 +37,11 @@ export async function registerSalesRoutes(app: FastifyInstance) {
   app.post("/sales/sync", { preHandler: requirePermission("sales.create") }, async (request, reply) => {
     const input = syncSaleSchema.parse(request.body);
     const sale = await createSale(
-      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      {
+        organizationId: request.authContext!.organizationId,
+        userId: request.authContext!.userId,
+        branchId: request.authContext!.branchId,
+      },
       input,
       { allowNegativeStock: true },
     );
@@ -67,6 +75,7 @@ export async function registerSalesRoutes(app: FastifyInstance) {
     const session = await getCurrentOpenSession(
       request.authContext!.organizationId,
       request.authContext!.userId,
+      request.authContext!.branchId,
     );
     const suspended = await suspendSale(
       {

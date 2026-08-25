@@ -3,6 +3,7 @@ import { db, schema } from "../../shared/db.js";
 import { ConflictError, NotFoundError } from "../../shared/errors.js";
 import type { ProductCreateInput, ProductUpdateInput } from "@pilotspos/validation";
 import type { Paginated } from "@pilotspos/types";
+import { fromQuantity, toQuantity } from "../../shared/numeric.js";
 
 const DEFAULT_PAGE_SIZE = 30;
 
@@ -78,6 +79,7 @@ export async function listProducts(
       sku: schema.products.sku,
       price: schema.products.price,
       cost: schema.products.cost,
+      unit: schema.products.unit,
       stock: schema.products.stock,
       minimumStock: schema.products.minimumStock,
       categoryId: schema.products.categoryId,
@@ -94,7 +96,11 @@ export async function listProducts(
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 
-  const items = await attachBarcodes(rows);
+  const items = (await attachBarcodes(rows)).map((product) => ({
+    ...product,
+    stock: fromQuantity(product.stock),
+    minimumStock: fromQuantity(product.minimumStock),
+  }));
 
   return { items, total: count, page, pageSize };
 }
@@ -110,6 +116,7 @@ export async function getCatalogSnapshot(organizationId: string) {
       id: schema.products.id,
       name: schema.products.name,
       price: schema.products.price,
+      unit: schema.products.unit,
       stock: schema.products.stock,
       minimumStock: schema.products.minimumStock,
     })
@@ -130,8 +137,12 @@ export async function getCatalogSnapshot(organizationId: string) {
     barcodesByProduct.set(row.productId, list);
   }
 
+  // El catálogo offline se guarda tal cual en IndexedDB y el punto de venta
+  // compara contra el stock: se normaliza a número aquí, no en el cliente.
   return rows.map((product) => ({
     ...product,
+    stock: fromQuantity(product.stock),
+    minimumStock: fromQuantity(product.minimumStock),
     barcodes: barcodesByProduct.get(product.id) ?? [],
   }));
 }
@@ -146,6 +157,7 @@ export async function getProductById(organizationId: string, id: string) {
       sku: schema.products.sku,
       price: schema.products.price,
       cost: schema.products.cost,
+      unit: schema.products.unit,
       stock: schema.products.stock,
       minimumStock: schema.products.minimumStock,
       categoryId: schema.products.categoryId,
@@ -162,7 +174,11 @@ export async function getProductById(organizationId: string, id: string) {
 
   if (!row) throw new NotFoundError("Producto no encontrado");
   const [withBarcodes] = await attachBarcodes([row]);
-  return withBarcodes!;
+  return {
+    ...withBarcodes!,
+    stock: fromQuantity(row.stock),
+    minimumStock: fromQuantity(row.minimumStock),
+  };
 }
 
 export async function getProductByBarcode(
@@ -215,8 +231,9 @@ export async function createProduct(
         sku: input.sku,
         price: input.price.toFixed(2),
         cost: input.cost.toFixed(2),
-        stock: input.stock,
-        minimumStock: input.minimumStock,
+        unit: input.unit,
+        stock: toQuantity(input.stock),
+        minimumStock: toQuantity(input.minimumStock),
         categoryId: input.categoryId ?? null,
         supplierId: input.supplierId ?? null,
         active: input.active,
@@ -236,7 +253,7 @@ export async function createProduct(
         branchId: params.branchId,
         productId: created.id,
         type: "INITIAL_STOCK",
-        quantity: input.stock,
+        quantity: toQuantity(input.stock),
         userId: params.userId,
         note: "Stock inicial al dar de alta el producto",
       });
@@ -273,7 +290,9 @@ export async function updateProduct(
         sku: input.sku,
         price: input.price !== undefined ? input.price.toFixed(2) : undefined,
         cost: input.cost !== undefined ? input.cost.toFixed(2) : undefined,
-        minimumStock: input.minimumStock,
+        unit: input.unit,
+        minimumStock:
+          input.minimumStock !== undefined ? toQuantity(input.minimumStock) : undefined,
         categoryId: input.categoryId,
         supplierId: input.supplierId,
         active: input.active,

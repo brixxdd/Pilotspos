@@ -73,8 +73,61 @@ export interface SessionUser {
 }
 
 // ---------------------------------------------------------------------------
+// Clientes finales (menú digital y fiado)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cliente del negocio, no usuario del sistema: pide desde el menú digital y
+ * puede comprar al fiado. Nunca tiene rol ni entra a la aplicación interna.
+ */
+export interface Customer {
+  id: UUID;
+  organizationId: UUID;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine: string | null;
+  addressReferences: string | null;
+  creditLimit: number;
+  balance: number;
+  active: boolean;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+/** Lo que el menú digital sabe del cliente que tiene la sesión abierta. */
+export interface SessionCustomer {
+  id: UUID;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine: string | null;
+  addressReferences: string | null;
+  creditLimit: number;
+  balance: number;
+  /** Cuánto puede fiar hoy: `creditLimit - balance`, nunca negativo. */
+  availableCredit: number;
+  organizationId: UUID;
+  organizationName: string;
+}
+
+// ---------------------------------------------------------------------------
 // Productos
 // ---------------------------------------------------------------------------
+
+/**
+ * Unidad de venta de un producto.
+ * - `UNIT`: se vende por pieza (cartón de huevo, ristra de longaniza). Cantidad entera.
+ * - `LB`:   se vende por peso en libras. Cantidad con hasta 3 decimales (3.250 lb).
+ *
+ * Guatemala vende carne por libra, no por kilo — la báscula del mostrador
+ * marca libras y el precio del pizarrón es por libra.
+ */
+export const PRODUCT_UNITS = ["UNIT", "LB"] as const;
+export type ProductUnit = (typeof PRODUCT_UNITS)[number];
+
+/** Decimales admitidos en cantidades pesadas. Debe coincidir con numeric(12,3) en la BD. */
+export const WEIGHT_DECIMALS = 3;
 
 export interface Category {
   id: UUID;
@@ -101,6 +154,8 @@ export interface Product {
   sku: string;
   price: string;
   cost: string;
+  /** Precio por libra cuando `unit` es `LB`; precio por pieza cuando es `UNIT`. */
+  unit: ProductUnit;
   stock: number;
   minimumStock: number;
   categoryId: UUID | null;
@@ -243,7 +298,9 @@ export interface CartItem {
   barcode: string | null;
   name: string;
   unitPrice: number;
+  /** Piezas si `unit` es `UNIT`; libras (hasta 3 decimales) si es `LB`. */
   quantity: number;
+  unit: ProductUnit;
   stock: number;
 }
 

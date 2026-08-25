@@ -1,6 +1,5 @@
 import {
   index,
-  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -71,7 +70,8 @@ export const saleItems = pgTable(
       .references(() => products.id, { onDelete: "restrict" }),
     productName: text("product_name").notNull(),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
-    quantity: integer("quantity").notNull(),
+    // numeric: 3.250 lb de costilla es una cantidad válida.
+    quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
     subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
   },
   (table) => [index("sale_items_sale_id_idx").on(table.saleId)],

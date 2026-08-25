@@ -63,11 +63,34 @@ export async function getSessionSummary(session: typeof schema.cashSessions.$inf
   };
 }
 
-export async function getOpenSession(organizationId: string, userId: string, registerId?: string) {
+/**
+ * Busca el turno de caja abierto que le corresponde al usuario.
+ *
+ * La sesión pertenece a la CAJA, no a la persona: la caja es física y sólo
+ * puede tener un turno abierto a la vez (ver la validación en `openSession`).
+ * En una carnicería es normal que el dueño abra la caja con el fondo por la
+ * mañana y la cajera opere ese mismo turno.
+ *
+ * Antes esta consulta filtraba por `userId` mientras `openSession` validaba
+ * por `registerId`: si el admin abría la caja, la cajera veía "no tienes una
+ * caja abierta" en Ventas y "esta caja ya tiene una sesión abierta" en Caja.
+ * Las dos decían la verdad — el modelo era el inconsistente.
+ *
+ * Quien tiene sucursal asignada ve el turno abierto de su sucursal; quien no
+ * la tiene (un admin global) sólo ve los turnos que abrió él.
+ */
+export async function getOpenSession(
+  organizationId: string,
+  userId: string,
+  branchId: string | null,
+  registerId?: string,
+) {
   const conditions = [
     eq(schema.cashSessions.organizationId, organizationId),
-    eq(schema.cashSessions.userId, userId),
     eq(schema.cashSessions.status, "OPEN"),
+    branchId
+      ? eq(schema.cashSessions.branchId, branchId)
+      : eq(schema.cashSessions.userId, userId),
   ];
   if (registerId) conditions.push(eq(schema.cashSessions.registerId, registerId));
 
@@ -80,7 +103,12 @@ export async function getOpenSession(organizationId: string, userId: string, reg
 
   if (!session) return null;
   const summary = await getSessionSummary(session);
-  return { session, summary };
+  const [openedBy] = await db
+    .select({ fullName: schema.users.fullName })
+    .from(schema.users)
+    .where(eq(schema.users.id, session.userId))
+    .limit(1);
+  return { session, summary, openedByName: openedBy?.fullName ?? null };
 }
 
 export async function openSession(
@@ -101,11 +129,16 @@ export async function openSession(
   if (!register) throw new NotFoundError("Caja no encontrada en tu sucursal");
 
   const [existingOpen] = await db
-    .select({ id: schema.cashSessions.id })
+    .select({ id: schema.cashSessions.id, openedBy: schema.users.fullName })
     .from(schema.cashSessions)
+    .innerJoin(schema.users, eq(schema.users.id, schema.cashSessions.userId))
     .where(and(eq(schema.cashSessions.registerId, input.registerId), eq(schema.cashSessions.status, "OPEN")))
     .limit(1);
-  if (existingOpen) throw new ConflictError("Esta caja ya tiene una sesión abierta");
+  if (existingOpen) {
+    throw new ConflictError(
+      `${register.name} ya tiene un turno abierto por ${existingOpen.openedBy}. Hay que cerrarlo antes de abrir uno nuevo.`,
+    );
+  }
 
   const session = await db.transaction(async (tx) => {
     const [created] = await tx
@@ -137,15 +170,22 @@ export async function openSession(
   return { session, summary };
 }
 
-export async function getCurrentOpenSession(organizationId: string, userId: string) {
+/** Igual criterio que `getOpenSession`: el turno es de la caja/sucursal, no de la persona. */
+export async function getCurrentOpenSession(
+  organizationId: string,
+  userId: string,
+  branchId: string | null,
+) {
   const [session] = await db
     .select()
     .from(schema.cashSessions)
     .where(
       and(
         eq(schema.cashSessions.organizationId, organizationId),
-        eq(schema.cashSessions.userId, userId),
         eq(schema.cashSessions.status, "OPEN"),
+        branchId
+          ? eq(schema.cashSessions.branchId, branchId)
+          : eq(schema.cashSessions.userId, userId),
       ),
     )
     .orderBy(desc(schema.cashSessions.openedAt))
@@ -155,10 +195,10 @@ export async function getCurrentOpenSession(organizationId: string, userId: stri
 }
 
 export async function addMovement(
-  params: { organizationId: string; userId: string },
+  params: { organizationId: string; userId: string; branchId: string | null },
   input: CashMovementInput,
 ) {
-  const session = await getCurrentOpenSession(params.organizationId, params.userId);
+  const session = await getCurrentOpenSession(params.organizationId, params.userId, params.branchId);
 
   await db.insert(schema.cashMovements).values({
     organizationId: params.organizationId,
@@ -174,10 +214,10 @@ export async function addMovement(
 }
 
 export async function closeSession(
-  params: { organizationId: string; userId: string },
+  params: { organizationId: string; userId: string; branchId: string | null },
   input: CashCloseInput,
 ) {
-  const session = await getCurrentOpenSession(params.organizationId, params.userId);
+  const session = await getCurrentOpenSession(params.organizationId, params.userId, params.branchId);
   const summary = await getSessionSummary(session);
   const difference = calculateCashDifference(summary.expectedCash, input.countedCash);
 

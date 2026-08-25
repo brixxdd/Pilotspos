@@ -2,6 +2,7 @@ import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { db, schema } from "../../shared/db.js";
 import { AppError, NotFoundError } from "../../shared/errors.js";
 import type { InventoryAdjustInput, InventoryReceiveInput } from "@pilotspos/validation";
+import { fromQuantity, toQuantity } from "../../shared/numeric.js";
 
 export async function getInventoryOverview(
   organizationId: string,
@@ -92,7 +93,7 @@ export async function receiveInventory(
         branchId: params.branchId,
         productId: item.productId,
         type: "PURCHASE",
-        quantity: item.quantity,
+        quantity: toQuantity(item.quantity),
         userId: params.userId,
         reference: input.reference ?? null,
         note: input.note ?? null,
@@ -114,7 +115,7 @@ export async function adjustInventory(
     .limit(1);
   if (!product) throw new NotFoundError("Producto no encontrado");
 
-  if (input.quantity < 0 && product.stock + input.quantity < 0) {
+  if (input.quantity < 0 && fromQuantity(product.stock) + input.quantity < 0) {
     throw new AppError("El ajuste dejaría el stock en negativo", 400, "NEGATIVE_STOCK");
   }
 
@@ -129,7 +130,7 @@ export async function adjustInventory(
       branchId: params.branchId,
       productId: input.productId,
       type: input.quantity > 0 ? "ADJUSTMENT_IN" : "ADJUSTMENT_OUT",
-      quantity: Math.abs(input.quantity),
+      quantity: toQuantity(Math.abs(input.quantity)),
       userId: params.userId,
       note: input.note ?? null,
     });

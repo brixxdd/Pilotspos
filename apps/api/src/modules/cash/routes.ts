@@ -25,8 +25,16 @@ export async function registerCashRoutes(app: FastifyInstance) {
   });
 
   app.get("/cash/session", async (request) => {
-    const result = await getOpenSession(request.authContext!.organizationId, request.authContext!.userId);
-    return { session: result?.session ?? null, summary: result?.summary ?? null };
+    const result = await getOpenSession(
+      request.authContext!.organizationId,
+      request.authContext!.userId,
+      request.authContext!.branchId,
+    );
+    return {
+      session: result?.session ?? null,
+      summary: result?.summary ?? null,
+      openedByName: result?.openedByName ?? null,
+    };
   });
 
   app.post("/cash/open", async (request, reply) => {
@@ -46,7 +54,7 @@ export async function registerCashRoutes(app: FastifyInstance) {
   app.post("/cash/movement", async (request) => {
     const input = cashMovementSchema.parse(request.body);
     return addMovement(
-      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId , branchId: request.authContext!.branchId },
       input,
     );
   });
@@ -54,7 +62,7 @@ export async function registerCashRoutes(app: FastifyInstance) {
   app.post("/cash/close", async (request) => {
     const input = cashCloseSchema.parse(request.body);
     return closeSession(
-      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId },
+      { organizationId: request.authContext!.organizationId, userId: request.authContext!.userId , branchId: request.authContext!.branchId },
       input,
     );
   });

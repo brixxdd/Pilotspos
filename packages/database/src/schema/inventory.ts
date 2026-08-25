@@ -1,4 +1,4 @@
-import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { branches, organizations } from "./organizations.js";
 import { products } from "./products.js";
 import { users } from "./users.js";
@@ -26,7 +26,8 @@ export const inventoryMovements = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     type: inventoryMovementTypeEnum("type").notNull(),
-    quantity: integer("quantity").notNull(),
+    // numeric: los movimientos de productos por libra llevan decimales.
+    quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

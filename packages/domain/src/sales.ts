@@ -1,5 +1,34 @@
-import type { CartItem, UserRole } from "@pilotspos/types";
+import { WEIGHT_DECIMALS, type CartItem, type ProductUnit, type UserRole } from "@pilotspos/types";
 import { toCents, toPesos } from "./money.js";
+
+// ---------------------------------------------------------------------------
+// Cantidades y peso
+// ---------------------------------------------------------------------------
+
+const WEIGHT_FACTOR = 10 ** WEIGHT_DECIMALS;
+
+/** Redondea un peso a los decimales que admite la BD (numeric(12,3)). */
+export function roundQuantity(quantity: number): number {
+  return Math.round(quantity * WEIGHT_FACTOR) / WEIGHT_FACTOR;
+}
+
+/**
+ * Valida que la cantidad sea coherente con la unidad del producto:
+ * los productos por pieza sólo admiten enteros; los de peso admiten
+ * hasta `WEIGHT_DECIMALS` decimales.
+ */
+export function isValidQuantity(quantity: number, unit: ProductUnit): boolean {
+  if (!Number.isFinite(quantity) || quantity <= 0) return false;
+  if (unit === "UNIT") return Number.isInteger(quantity);
+  return roundQuantity(quantity) === quantity;
+}
+
+/** Formatea una cantidad para mostrarla: "3.250 lb" o "2 pza". */
+export function formatQuantity(quantity: number, unit: ProductUnit): string {
+  return unit === "LB"
+    ? `${quantity.toFixed(WEIGHT_DECIMALS)} lb`
+    : `${Math.round(quantity)} pza`;
+}
 
 export interface CartLine {
   unitPrice: number;
@@ -8,8 +37,11 @@ export interface CartLine {
 
 /** Suma de (precio unitario × cantidad) de todas las líneas del carrito. */
 export function calculateSubtotal(items: CartLine[]): number {
+  // Con productos por libra la cantidad es fraccionaria (3.250 lb), así que el
+  // producto precio × cantidad cae entre centavos. Se redondea por línea —
+  // igual que la báscula del mostrador — para que la suma cuadre con el ticket.
   const cents = items.reduce(
-    (sum, item) => sum + toCents(item.unitPrice) * item.quantity,
+    (sum, item) => sum + Math.round(toCents(item.unitPrice) * item.quantity),
     0,
   );
   return toPesos(cents);
@@ -53,7 +85,8 @@ export interface CartValidationResult {
  * `allowNegativeStock` omite la validación de stock suficiente: se usa
  * únicamente al sincronizar ventas cerradas sin conexión, donde el cobro ya
  * ocurrió físicamente y rechazar la venta dejaría dinero en caja sin una
- * venta que lo respalde. La cantidad sigue debiendo ser un entero positivo.
+ * venta que lo respalde. La cantidad sigue debiendo ser válida para la unidad del producto
+ * (entera si es por pieza, hasta 3 decimales si es por libra).
  */
 export function validateCart(
   items: CartItem[],
@@ -62,7 +95,7 @@ export function validateCart(
   const errors: CartValidationError[] = [];
 
   for (const item of items) {
-    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+    if (!isValidQuantity(item.quantity, item.unit)) {
       errors.push({ productId: item.productId, reason: "INVALID_QUANTITY" });
       continue;
     }

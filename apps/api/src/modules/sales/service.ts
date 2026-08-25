@@ -12,6 +12,7 @@ import { AppError, NotFoundError } from "../../shared/errors.js";
 import { nextCounterValue } from "../../shared/counters.js";
 import { getCurrentOpenSession } from "../cash/service.js";
 import type { SaleInput, SuspendSaleInput } from "@pilotspos/validation";
+import { fromQuantity, toQuantity } from "../../shared/numeric.js";
 
 const CENTS = 100;
 const toCents = (value: number) => Math.round(value * CENTS);
@@ -36,7 +37,8 @@ async function loadCartItems(organizationId: string, items: { productId: string;
       name: product.name,
       unitPrice: Number(product.price),
       quantity: item.quantity,
-      stock: product.stock,
+      unit: product.unit,
+      stock: fromQuantity(product.stock),
     };
   });
 
@@ -48,7 +50,7 @@ function generateSaleNumber(sequence: number): string {
 }
 
 export async function createSale(
-  params: { organizationId: string; userId: string },
+  params: { organizationId: string; userId: string; branchId: string | null },
   input: SaleInput,
   options: { allowNegativeStock?: boolean } = {},
 ) {
@@ -68,7 +70,7 @@ export async function createSale(
     if (existing) return getSaleById(params.organizationId, existing.id);
   }
 
-  const session = await getCurrentOpenSession(params.organizationId, params.userId);
+  const session = await getCurrentOpenSession(params.organizationId, params.userId, params.branchId);
 
   const { cartItems } = await loadCartItems(params.organizationId, input.items);
 
@@ -124,20 +126,25 @@ export async function createSale(
     if (!createdSale) throw new Error("No se pudo crear la venta");
 
     for (const item of cartItems) {
-      const itemSubtotal = item.unitPrice * item.quantity;
+      // Con productos por libra el producto cae entre centavos: se redondea la
+      // línea igual que en calculateSubtotal para que el ticket cuadre.
+      const itemSubtotal = Math.round(item.unitPrice * item.quantity * 100) / 100;
 
       await tx.insert(schema.saleItems).values({
         saleId: createdSale.id,
         productId: item.productId,
         productName: item.name,
         unitPrice: item.unitPrice.toFixed(2),
-        quantity: item.quantity,
+        quantity: toQuantity(item.quantity),
         subtotal: itemSubtotal.toFixed(2),
       });
 
       const stockCondition = options.allowNegativeStock
         ? eq(schema.products.id, item.productId)
-        : and(eq(schema.products.id, item.productId), gte(schema.products.stock, item.quantity));
+        : and(
+            eq(schema.products.id, item.productId),
+            gte(schema.products.stock, toQuantity(item.quantity)),
+          );
 
       const [updatedProduct] = await tx
         .update(schema.products)
@@ -153,7 +160,7 @@ export async function createSale(
         branchId: session.branchId,
         productId: item.productId,
         type: "SALE",
-        quantity: item.quantity,
+        quantity: toQuantity(item.quantity),
         userId: params.userId,
         reference: createdSale.saleNumber,
       });
@@ -366,7 +373,8 @@ export async function recoverSuspendedSale(organizationId: string, id: string) {
     return {
       ...item,
       unitPrice: fresh ? Number(fresh.price) : item.unitPrice,
-      stock: fresh ? fresh.stock : 0,
+      unit: fresh ? fresh.unit : item.unit,
+      stock: fresh ? fromQuantity(fresh.stock) : 0,
       name: fresh ? fresh.name : item.name,
     };
   });
