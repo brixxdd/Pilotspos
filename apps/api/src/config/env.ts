@@ -15,6 +15,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
   COOKIE_SECRET: z.string().min(16, "COOKIE_SECRET debe tener al menos 16 caracteres"),
   SESSION_COOKIE_NAME: z.string().default("pilotspos_session"),
+  CUSTOMER_COOKIE_NAME: z.string().default("pilotspos_customer"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
 });
