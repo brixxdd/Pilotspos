@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: oklch(0.975 0.008 75);
+  color: oklch(0.2 0.02 40);
+  /* iOS rebota el scroll y deja ver el fondo del navegador detrás de la
+     barra fija del menú público; el color de fondo evita ese destello. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* --- Animaciones del menú digital público (app/m/...) ---------------------
+   Solo CSS: la página la abre un cliente en su celular, con datos móviles y
+   probablemente un teléfono modesto. Nada de librerías de animación. */
+
+@keyframes corte-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes corte-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes corte-pop {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.animate-rise {
+  animation: corte-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-slide-up {
+  animation: corte-slide-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-pop {
+  animation: corte-pop 0.24s ease-out;
+}
+
+@keyframes corte-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: corte-fade 0.2s ease-out both;
+}
+
+/* La hoja de confirmación sube desde abajo en el celular, que es donde está
+   el pulgar, y aparece centrada en pantallas grandes. */
+.animate-sheet {
+  animation: corte-slide-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 640px) {
+  .animate-sheet {
+    animation: corte-rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-rise,
+  .animate-slide-up,
+  .animate-pop,
+  .animate-fade,
+  .animate-sheet {
+    animation: none;
+  }
+}
+
+/* Encabezado del menú: la marca de Corte, pero más cálida y con más cuerpo
+   que dentro del sistema — aquí quien mira es el cliente, no el cajero. */
+.menu-hero {
+  background-image:
+    radial-gradient(120% 90% at 85% 0%, oklch(0.42 0.13 32 / 0.85) 0%, transparent 60%),
+    linear-gradient(165deg, oklch(0.26 0.045 38) 0%, oklch(0.17 0.016 40) 70%);
+}
+
+/* Barra de categorías: se desplaza con el dedo, sin barra de scroll visible. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #ticket-print-area,
+  #ticket-print-area * {
+    visibility: visible;
+  }
+  #ticket-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+  }
+}
