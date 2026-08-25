@@ -1,0 +1,1465 @@
+<title>Corte POS para Guerra's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --ground: #EDF0EF;
+    --surface: #FFFFFF;
+    --surface-2: #E3E8E6;
+    --line: #CBD3D1;
+    --line-soft: #DCE2E0;
+    --ink: #15181A;
+    --ink-2: #3B4649;
+    --steel: #64757B;
+    --red: #9A1F22;
+    --red-soft: #F0DCDC;
+    --amber: #A66412;
+    --amber-soft: #F3E5CF;
+    --shadow: 0 1px 2px rgba(21,24,26,.06), 0 8px 24px rgba(21,24,26,.05);
+
+    --display: "Anton", "Arial Narrow", Impact, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #121516;
+      --surface: #1A1E20;
+      --surface-2: #23292B;
+      --line: #333B3E;
+      --line-soft: #272E30;
+      --ink: #EDF0EF;
+      --ink-2: #C2CBCA;
+      --steel: #8B9B9F;
+      --red: #E05457;
+      --red-soft: #3A1E1F;
+      --amber: #E0A24A;
+      --amber-soft: #33270F;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #121516;
+    --surface: #1A1E20;
+    --surface-2: #23292B;
+    --line: #333B3E;
+    --line-soft: #272E30;
+    --ink: #EDF0EF;
+    --ink-2: #C2CBCA;
+    --steel: #8B9B9F;
+    --red: #E05457;
+    --red-soft: #3A1E1F;
+    --amber: #E0A24A;
+    --amber-soft: #33270F;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- shell ---------- */
+
+  .deck {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rail {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 3px;
+    background: var(--line-soft);
+    flex: none;
+  }
+  .rail__fill {
+    height: 100%;
+    background: var(--red);
+    width: 0%;
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+  }
+
+  .topbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px clamp(16px, 4vw, 56px);
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--ground);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .brand__mark {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border-radius: 3px;
+    background: var(--red);
+    color: #fff;
+    font-family: var(--display);
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    letter-spacing: 0;
+  }
+  .brand__sep { color: var(--line); }
+  .brand__client { color: var(--ink-2); }
+
+  .topbar__right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .counter {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .06em;
+    color: var(--steel);
+  }
+  .counter b { color: var(--ink); font-weight: 600; }
+
+  .stage {
+    flex: 1 1 auto;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    display: none;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(28px, 5vh, 64px) clamp(20px, 5vw, 76px);
+    overflow-y: auto;
+    animation: enter .34s cubic-bezier(.2,.7,.3,1) both;
+  }
+  .slide.is-active { display: flex; }
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { animation: none; }
+    .rail__fill { transition: none; }
+  }
+
+  .inner {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  /* ---------- controls ---------- */
+
+  .controls {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px clamp(16px, 4vw, 56px) 14px;
+    border-top: 1px solid var(--line-soft);
+    background: var(--ground);
+  }
+
+  .dots { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dot {
+    width: 22px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 1px;
+    background: var(--line);
+    cursor: pointer;
+    transition: background .18s;
+  }
+  .dot:hover { background: var(--steel); }
+  .dot.is-active { background: var(--red); }
+  .dot:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+  .arrows { display: flex; gap: 8px; }
+  .arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: border-color .18s, background .18s;
+  }
+  .arrow:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+  .arrow:disabled { opacity: .35; cursor: default; }
+  .arrow:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  .hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--steel);
+    letter-spacing: .04em;
+  }
+  @media (max-width: 720px) { .hint { display: none; } }
+
+  /* ---------- typography ---------- */
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 20px;
+  }
+  .eyebrow::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(48px, 9vw, 108px);
+    line-height: .92;
+    letter-spacing: -.005em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(30px, 4.6vw, 54px);
+    line-height: 1.02;
+    letter-spacing: .002em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+
+  .lede {
+    font-size: clamp(16px, 1.7vw, 20px);
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0 0 32px;
+    text-wrap: pretty;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  /* ---------- cover ---------- */
+
+  .cover__title { margin-bottom: 22px; }
+  .cover__sub {
+    font-size: clamp(17px, 2vw, 23px);
+    line-height: 1.4;
+    color: var(--ink-2);
+    max-width: 30ch;
+    margin: 0 0 44px;
+    text-wrap: balance;
+  }
+  .cover__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    padding-top: 22px;
+    border-top: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .cover__meta b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- grids ---------- */
+
+  .grid { display: grid; gap: 14px; }
+  .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) {
+    .grid--3, .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 620px) {
+    .grid--2, .grid--3, .grid--4 { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card__label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .card__title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .card__text {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin: 0;
+  }
+  .card__cost {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--red);
+  }
+
+  /* ---------- the three questions ---------- */
+
+  .qlist { display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .q {
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    align-items: baseline;
+    gap: 18px;
+    padding: 22px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .q__n {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--red);
+    font-variant-numeric: tabular-nums;
+  }
+  .q__text {
+    font-size: clamp(17px, 2.2vw, 25px);
+    font-weight: 500;
+    line-height: 1.28;
+    text-wrap: balance;
+  }
+  .q__blank {
+    font-family: var(--mono);
+    font-size: clamp(15px, 1.8vw, 20px);
+    color: var(--steel);
+    border-bottom: 2px solid var(--line);
+    padding: 0 24px 2px;
+    white-space: nowrap;
+  }
+  @media (max-width: 720px) {
+    .q { grid-template-columns: 30px 1fr; }
+    .q__blank { grid-column: 2; justify-self: start; }
+  }
+
+  /* ---------- feature list ---------- */
+
+  .feats { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .feats li {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 15.5px;
+    line-height: 1.45;
+  }
+  .feats li:last-child { border-bottom: 0; }
+  .feats b { font-weight: 600; }
+  .feats span.mk {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    padding-top: 3px;
+  }
+  .feats .note { color: var(--steel); font-size: 14px; display: block; margin-top: 2px; }
+
+  .split {
+    display: grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: clamp(24px, 4vw, 56px);
+    align-items: start;
+  }
+  @media (max-width: 900px) { .split { grid-template-columns: minmax(0,1fr); gap: 26px; } }
+
+  /* ---------- mock screen ---------- */
+
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .screen__bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .screen__bar i {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--line); flex: none;
+  }
+  .screen__body { padding: 14px 16px; display: grid; gap: 10px; }
+
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .row__name { font-weight: 500; }
+  .row__sub { display: block; font-size: 12px; color: var(--steel); font-weight: 400; }
+  .row__val {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .row__val.neg { color: var(--red); }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .pill--ok { background: var(--red-soft); color: var(--red); }
+  .pill--warn { background: var(--amber-soft); color: var(--amber); }
+  .pill--mute { background: var(--surface-2); color: var(--steel); }
+
+  .total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 4px;
+    padding-top: 11px;
+    border-top: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  /* ---------- before / after ---------- */
+
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .ba { grid-template-columns: minmax(0,1fr); } }
+  .ba__col {
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 20px;
+    background: var(--surface);
+  }
+  .ba__col--now { background: transparent; border-style: dashed; }
+  .ba__head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .ba__col--now .ba__head { color: var(--steel); }
+  .ba__col--next .ba__head { color: var(--red); }
+  .ba__steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 11px; counter-reset: s; }
+  .ba__steps li {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--ink-2);
+  }
+  .ba__steps li::before {
+    counter-increment: s;
+    content: counter(s);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--steel);
+    padding-top: 3px;
+  }
+  .ba__col--next .ba__steps li { color: var(--ink); }
+
+  /* ---------- phases ---------- */
+
+  .phase {
+    display: grid;
+    grid-template-columns: 128px 1fr 128px;
+    gap: 20px;
+    align-items: start;
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+  }
+  .phase:last-of-type { border-bottom: 1px solid var(--line); }
+  @media (max-width: 780px) {
+    .phase { grid-template-columns: 1fr; gap: 8px; }
+  }
+  .phase__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  .phase__when { display: block; color: var(--steel); margin-top: 4px; }
+  .phase__name { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
+  .phase__desc { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); margin: 0; }
+  .phase__pay {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  @media (max-width: 780px) { .phase__pay { text-align: left; } }
+  .phase__pay small { display: block; font-size: 11px; color: var(--steel); letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+
+  /* ---------- price ---------- */
+
+  .price {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .price__fig {
+    font-family: var(--display);
+    font-size: clamp(60px, 11vw, 132px);
+    line-height: .86;
+    color: var(--red);
+    font-variant-numeric: tabular-nums;
+  }
+  .price__unit {
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--steel);
+    padding-bottom: 12px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat__fig {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+  }
+  .stat__lab {
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--steel);
+  }
+
+  /* ---------- includes / excludes ---------- */
+
+  .incl { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+  .incl li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .incl li::before {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding-top: 1px;
+  }
+  .incl--yes li::before { content: "+"; color: var(--red); }
+  .incl--no li::before { content: "\2013"; color: var(--steel); }
+  .incl--no li { color: var(--ink-2); }
+
+  .box {
+    border: 1px solid var(--line-soft);
+    border-radius: 5px;
+    padding: 20px;
+    background: var(--surface);
+  }
+  .box--flat { background: transparent; border-style: dashed; }
+  .box__head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .steps-final { display: grid; gap: 0; }
+  .step-final {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 18px;
+    align-items: baseline;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .step-final:first-child { border-top: 1px solid var(--line); }
+  .step-final__n {
+    font-family: var(--display);
+    font-size: 30px;
+    color: var(--red);
+    line-height: 1;
+  }
+  .step-final__t { font-size: clamp(16px, 1.9vw, 21px); font-weight: 500; line-height: 1.35; }
+  .step-final__d { font-size: 14.5px; color: var(--steel); margin-top: 4px; line-height: 1.45; }
+
+  .footnote {
+    margin-top: 22px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--steel);
+    max-width: 70ch;
+  }
+
+  .sig {
+    margin-top: 34px;
+    padding-top: 18px;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .sig b { color: var(--ink); font-weight: 500; }
+
+
+  /* ---------- impresión / PDF ---------- */
+
+  @media print {
+    @page { size: 1280px 1300px; margin: 0; }
+
+    :root {
+      --ground: #121516;
+      --surface: #1A1E20;
+      --surface-2: #23292B;
+      --line: #333B3E;
+      --line-soft: #272E30;
+      --ink: #EDF0EF;
+      --ink-2: #C2CBCA;
+      --steel: #8B9B9F;
+      --red: #E05457;
+      --red-soft: #3A1E1F;
+      --amber: #E0A24A;
+      --amber-soft: #33270F;
+      --shadow: none;
+    }
+
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    html, body { background: var(--ground); height: auto; }
+
+    .rail, .topbar, .controls { display: none !important; }
+
+    .shell, .stage { display: block; height: auto; overflow: visible; }
+
+    .slide {
+      display: flex !important;
+      animation: none !important;
+      overflow: visible;
+      height: auto;
+      min-height: 1300px;
+      padding: 40px 68px;
+      break-after: page;
+      page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+
+    /* en papel no hay clic: el precio va destapado y el botón sobra */
+    .reveal__btn { display: none !important; }
+    .reveal__val[hidden] { display: flex !important; }
+  }
+
+  /* ---------- addon / módulo opcional ---------- */
+
+  .addon {
+    margin-top: 22px;
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: 5px;
+    padding: 20px 22px;
+  }
+  .addon__tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .addon__desc { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 8px 0 18px; }
+  .addon__items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .addon__items--one { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
+  @media (max-width: 720px) { .addon__items { grid-template-columns: minmax(0, 1fr); } }
+  .addon__item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .addon__name { font-size: 16px; font-weight: 600; margin: 0; }
+  .addon__text { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); margin: 0 0 6px; }
+  .addon__item .reveal { margin-top: auto; }
+  .addon__item .reveal__fig { font-size: clamp(32px, 4.5vw, 46px); }
+  .addon__note {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--steel);
+    margin: 18px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .reveal__btn {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--amber-soft);
+    border: 1px solid var(--amber);
+    border-radius: 4px;
+    padding: 11px 18px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: background .15s ease, transform .12s ease;
+  }
+  .reveal__btn:hover { background: var(--amber); color: var(--ground); }
+  .reveal__btn:active { transform: translateY(1px); }
+  .reveal__btn:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal__btn, .reveal__btn span { transition: none; }
+  }
+  .reveal__btn span { transition: transform .15s ease; }
+  .reveal__btn:hover span { transform: translateX(3px); }
+
+  .reveal__val { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .reveal__val[hidden] { display: none; }
+  .reveal__fig {
+    font-family: var(--display);
+    font-size: clamp(38px, 6vw, 62px);
+    line-height: .9;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+  }
+  .reveal__unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--steel);
+    padding-bottom: 5px;
+  }
+  .reveal__unit b { color: var(--amber); }
+
+</style>
+
+<div class="deck">
+  <div class="rail"><div class="rail__fill" id="railFill"></div></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark">C</span>
+      <span>Corte&nbsp;POS</span>
+      <span class="brand__sep">/</span>
+      <span class="brand__client">Carnicería Guerra's</span>
+    </div>
+    <div class="topbar__right">
+      <span class="counter"><b id="cNow">1</b> / <span id="cTot">13</span></span>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+
+    <!-- 1 · Portada -->
+    <section class="slide is-active">
+      <div class="inner">
+        <p class="eyebrow">Propuesta de sistema · Agosto 2026</p>
+        <h1 class="cover__title">Corte<br>POS</h1>
+        <p class="cover__sub">El punto de venta hecho para una carnicería, no para una tienda cualquiera.</p>
+        <div class="cover__meta">
+          <span>Para <b>Carnicería Guerra's</b></span>
+          <span>Sucursales <b>Las Minas · La Hermita</b></span>
+          <span>Desarrolla <b>DevPilots</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · Hoy -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">01 — Cómo se trabaja hoy</p>
+        <h2>Cuatro cosas que hoy dependen<br>de la memoria de alguien</h2>
+        <p class="lede">Nada de esto es descuido: es lo normal en un negocio que creció rápido. El problema es que <strong>cada una cuesta dinero todos los días</strong>, y ninguna deja rastro.</p>
+        <div class="grid grid--4">
+          <div class="card">
+            <span class="card__label">Pedidos</span>
+            <h3 class="card__title">Todo entra por llamada</h3>
+            <p class="card__text">El cliente marca, alguien contesta, se apunta en un papel. Si están ocupados, el pedido se pierde.</p>
+            <p class="card__cost">El dueño es el conmutador del negocio.</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Fiado</span>
+            <h3 class="card__title">La libreta</h3>
+            <p class="card__text">Se anota quién debe, pero no cuánto lleva, desde cuándo, ni cuánto ya abonó.</p>
+            <p class="card__cost">Dinero prestado sin fecha de regreso.</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Corte</span>
+            <h3 class="card__title">La venta se saca a mano</h3>
+            <p class="card__text">Al cierre se cuenta el efectivo y se compara contra lo que uno se acuerda que se vendió.</p>
+            <p class="card__cost">Un faltante no se detecta hasta que es grande.</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Inventario</span>
+            <h3 class="card__title">Está en la cabeza</h3>
+            <p class="card__text">Cuánta carne entró, cuánta se vendió y cuánta se mermó, lo sabe quien estuvo en el mostrador.</p>
+            <p class="card__cost">Si esa persona falta, el control falta.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Tres preguntas -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">02 — La prueba</p>
+        <h2>Tres preguntas</h2>
+        <p class="lede">Si alguna respuesta tarda más de diez segundos, ahí está exactamente lo que este sistema viene a resolver.</p>
+        <div class="qlist">
+          <div class="q">
+            <span class="q__n">01</span>
+            <span class="q__text">¿Cuánto le deben en fiado en este momento?</span>
+            <span class="q__blank">$</span>
+          </div>
+          <div class="q">
+            <span class="q__n">02</span>
+            <span class="q__text">¿Cuánto vendió ayer Las Minas contra La Hermita?</span>
+            <span class="q__blank">$ &nbsp; vs &nbsp; $</span>
+          </div>
+          <div class="q">
+            <span class="q__n">03</span>
+            <span class="q__text">¿Cuántos kilos entraron esta semana y cuántos se vendieron?</span>
+            <span class="q__blank">lb &nbsp; / &nbsp; lb</span>
+          </div>
+        </div>
+        <p class="footnote">Con Corte POS las tres se contestan desde el celular, en la pantalla de inicio, sin llamarle a nadie.</p>
+      </div>
+    </section>
+
+    <!-- 4 · Qué es -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">03 — La propuesta</p>
+        <h2>Un sistema, cuatro piezas</h2>
+        <p class="lede">Corte POS no es un programa genérico adaptado a fuerza. Está construido sobre la forma de trabajar de una carnicería: se vende por libra, se fía, y hay dos mostradores que reportan al mismo dueño.</p>
+        <div class="grid grid--4">
+          <div class="card">
+            <span class="card__label">Pieza 01</span>
+            <h3 class="card__title">Punto de venta y caja</h3>
+            <p class="card__text">Cobrar rápido en el mostrador y cerrar el día cuadrado.</p>
+            <p class="card__cost">Base ya funcionando</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Pieza 02</span>
+            <h3 class="card__title">Inventario y sucursales</h3>
+            <p class="card__text">Qué entró, qué salió y cómo va cada sucursal por separado.</p>
+            <p class="card__cost">Base ya funcionando</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Pieza 03</span>
+            <h3 class="card__title">Fiado con control</h3>
+            <p class="card__text">Cada cliente con su cuenta, su límite y sus abonos.</p>
+            <p class="card__cost">Incluido en el paquete</p>
+          </div>
+          <div class="card">
+            <span class="card__label">Pieza 04</span>
+            <h3 class="card__title">Menú digital y pedidos</h3>
+            <p class="card__text">El cliente pide desde su celular. Se acaban las llamadas.</p>
+            <p class="card__cost">Módulo aparte · a tratar</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · Módulo 1 -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">Pieza 01 — Punto de venta y caja</p>
+        <div class="split">
+          <div>
+            <h2>Que el mostrador<br>nunca se detenga</h2>
+            <ul class="feats">
+              <li><span class="mk">01</span><span><b>Venta en segundos.</b> Se busca el corte, se marca el peso y se cobra. Sin capturar precios a mano.</span></li>
+              <li><span class="mk">02</span><span><b>Sigue vendiendo sin internet.</b> Si se cae la conexión, la venta se registra igual y se sincroniza sola cuando regresa. <span class="note">Ya construido y funcionando.</span></span></li>
+              <li><span class="mk">03</span><span><b>Folios que no se repiten ni se saltan.</b> Aunque los dos mostradores cobren al mismo tiempo. <span class="note">Ya construido y funcionando.</span></span></li>
+              <li><span class="mk">04</span><span><b>Corte de caja por turno y por cajero.</b> Se ve quién cobró qué y dónde quedó el descuadre.</span></li>
+            </ul>
+          </div>
+          <div class="screen">
+            <div class="screen__bar"><i></i><i></i><i></i><span>Venta · Las Minas · Caja 1</span></div>
+            <div class="screen__body">
+              <div class="row">
+                <span class="row__name">Lomito de res<span class="row__sub">2.340 lb × Q52.00</span></span>
+                <span class="row__val">Q121.68</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Bistec de res<span class="row__sub">3.085 lb × Q38.00</span></span>
+                <span class="row__val">Q117.23</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Chorizo artesanal<span class="row__sub">1.620 lb × Q36.00</span></span>
+                <span class="row__val">Q58.32</span>
+              </div>
+              <div class="total"><span>TOTAL</span><span>Q297.23</span></div>
+              <div class="row" style="padding-top:4px">
+                <span class="pill pill--mute">Folio LM-004182</span>
+                <span class="pill pill--ok">Sin conexión · en cola</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · Módulo 2 -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">Pieza 02 — Inventario y sucursales</p>
+        <div class="split">
+          <div>
+            <h2>Las dos sucursales,<br>en una sola pantalla</h2>
+            <ul class="feats">
+              <li><span class="mk">01</span><span><b>Cada sucursal con su propio inventario.</b> Las Minas y La Hermita no se revuelven, pero se comparan.</span></li>
+              <li><span class="mk">02</span><span><b>Entradas de proveedor.</b> Se registra lo que llegó y a qué costo, y el sistema calcula el margen real por corte.</span></li>
+              <li><span class="mk">03</span><span><b>Merma registrada.</b> Lo que se perdió queda anotado con motivo, no desaparece del número.</span></li>
+              <li><span class="mk">04</span><span><b>Aviso de stock bajo.</b> Antes de que se acabe el corte que más se vende.</span></li>
+            </ul>
+          </div>
+          <div class="screen">
+            <div class="screen__bar"><i></i><i></i><i></i><span>Resumen del día</span></div>
+            <div class="screen__body">
+              <div class="row">
+                <span class="row__name">Las Minas<span class="row__sub">48 tickets · ticket promedio Q312</span></span>
+                <span class="row__val">Q14,976</span>
+              </div>
+              <div class="row">
+                <span class="row__name">La Hermita<span class="row__sub">31 tickets · ticket promedio Q287</span></span>
+                <span class="row__val">Q8,897</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Merma registrada<span class="row__sub">7.1 lb · pollo y molida</span></span>
+                <span class="row__val neg">−Q486</span>
+              </div>
+              <div class="total"><span>VENTA DEL DÍA</span><span>Q23,873</span></div>
+              <div class="row" style="padding-top:4px">
+                <span class="pill pill--warn">2 cortes en stock bajo</span>
+                <span class="pill pill--mute">Cierre 20:14</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="footnote">Cifras de ejemplo para mostrar la pantalla. Al arrancar se cargan con la venta real del negocio.</p>
+      </div>
+    </section>
+
+    <!-- 7 · Fiado -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">Pieza 03 — Fiado con control · incluido en el paquete</p>
+        <div class="split">
+          <div>
+            <h2>El fiado deja de ser<br>un acto de fe</h2>
+            <p class="lede">Fiar es parte del negocio y no se va a quitar. Lo que cambia es que a partir de ahora <strong>cada peso fiado tiene nombre, fecha y límite</strong>.</p>
+            <ul class="feats">
+              <li><span class="mk">01</span><span><b>Cuenta por cliente.</b> Qué debe, desde cuándo, y qué se llevó cada vez.</span></li>
+              <li><span class="mk">02</span><span><b>Límite de crédito.</b> Si el cliente ya pasó su tope, el sistema avisa antes de entregar.</span></li>
+              <li><span class="mk">03</span><span><b>Abonos parciales.</b> Se registra el abono y el saldo se ajusta solo.</span></li>
+              <li><span class="mk">04</span><span><b>Estado de cuenta por WhatsApp.</b> Un mensaje claro en vez de una conversación incómoda.</span></li>
+            </ul>
+          </div>
+          <div class="screen">
+            <div class="screen__bar"><i></i><i></i><i></i><span>Fiado · cuentas abiertas</span></div>
+            <div class="screen__body">
+              <div class="row">
+                <span class="row__name">Comedor La Esquina<span class="row__sub">Límite Q8,000 · último abono hace 6 días</span></span>
+                <span class="row__val">Q6,240</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Comedor El Portal<span class="row__sub">Límite Q5,000 · sin abono en 24 días</span></span>
+                <span class="row__val neg">Q5,380</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Sra. Ramírez<span class="row__sub">Límite Q1,500 · abona los viernes</span></span>
+                <span class="row__val">Q740</span>
+              </div>
+              <div class="total"><span>TOTAL POR COBRAR</span><span>Q12,360</span></div>
+              <div class="row" style="padding-top:4px">
+                <span class="pill pill--warn">1 cuenta pasada de límite</span>
+                <span class="pill pill--mute">14 clientes activos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="footnote">Cifras de ejemplo. El primer día de uso, esta pantalla contesta sola la pregunta número uno de este documento.</p>
+      </div>
+    </section>
+
+    <!-- 8 · Menú digital -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">Pieza 04 — Menú digital y pedidos · módulo aparte</p>
+        <div class="split">
+          <div>
+            <h2>El cliente pide solo.<br>Usted deja de contestar.</h2>
+            <p class="lede">Un link que se manda por WhatsApp o se pega en un letrero con código QR. El cliente ve los cortes con precio del día, arma su pedido y lo manda. <strong>Sin llamada, sin apuntar en papel.</strong></p>
+            <ul class="feats">
+              <li><span class="mk">01</span><span><b>Precios del día, siempre al corriente.</b> Se actualizan desde el mismo sistema del mostrador.</span></li>
+              <li><span class="mk">02</span><span><b>Pensado para peso variable.</b> El cliente pide 1 lb, se corta 1.08 lb: el sistema recalcula y le avisa el total antes de entregar. <span class="note">Aquí es donde fallan los carritos de compra normales.</span></span></li>
+              <li><span class="mk">03</span><span><b>El pedido cae en pantalla.</b> Con hora de recolección y sucursal, en una fila que se va despachando.</span></li>
+              <li><span class="mk">04</span><span><b>Se conecta al fiado.</b> Un cliente con cuenta puede pedir a crédito, dentro de su límite.</span></li>
+            </ul>
+          </div>
+          <div class="screen">
+            <div class="screen__bar"><i></i><i></i><i></i><span>Pedidos de hoy</span></div>
+            <div class="screen__body">
+              <div class="row">
+                <span class="row__name">Pedido #0148 · Fonda La Esquina<span class="row__sub">10 lb molida especial · recoge 11:00</span></span>
+                <span class="pill pill--warn">Por pesar</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Pedido #0147 · Marisol H.<span class="row__sub">4 lb lomito, 2 lb chorizo · recoge 13:30</span></span>
+                <span class="pill pill--ok">Listo</span>
+              </div>
+              <div class="row">
+                <span class="row__name">Pedido #0146 · Comedor El Portal<span class="row__sub">25 lb bistec · recoge 09:00</span></span>
+                <span class="pill pill--mute">Entregado</span>
+              </div>
+              <div class="total"><span>PEDIDOS EN LÍNEA HOY</span><span>Q9,415</span></div>
+              <div class="row" style="padding-top:4px">
+                <span class="pill pill--mute">carniceriaguerras.mx/pedidos</span>
+                <span class="pill pill--ok">0 llamadas contestadas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 · Antes / después -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">04 — Un pedido, paso a paso</p>
+        <h2>Lo mismo, con seis pasos menos</h2>
+        <div class="ba">
+          <div class="ba__col ba__col--now">
+            <p class="ba__head">Hoy · un pedido por llamada</p>
+            <ol class="ba__steps">
+              <li>Suena el teléfono a media hora pico.</li>
+              <li>Alguien deja el mostrador para contestar.</li>
+              <li>Se apunta el pedido en un papel.</li>
+              <li>El papel se traspapela o se lee mal.</li>
+              <li>Se corta, se pesa, se vuelve a marcar para decir el total.</li>
+              <li>El cliente llega, se cobra, no queda registro de quién pidió qué.</li>
+              <li>Si quedó a deber, se anota en la libreta.</li>
+            </ol>
+          </div>
+          <div class="ba__col ba__col--next">
+            <p class="ba__head">Con Corte POS</p>
+            <ol class="ba__steps">
+              <li>El cliente entra al link y arma su pedido.</li>
+              <li>El pedido aparece en la pantalla de la sucursal.</li>
+              <li>Se corta y se pesa: el total se calcula solo.</li>
+              <li>El cliente recibe el total y la hora por WhatsApp.</li>
+              <li>Llega, paga o se carga a su cuenta, y queda registrado.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="footnote">El teléfono no desaparece — deja de ser la única puerta de entrada.</p>
+      </div>
+    </section>
+
+    <!-- 10 · Estado -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">05 — Punto de partida</p>
+        <h2>Lo que ya está hecho<br>y lo que falta</h2>
+        <p class="lede">No empezamos de cero. La base del sistema ya está construida y en funcionamiento; lo que se contrata es completarla y ponerla a trabajar en el negocio.</p>
+        <div class="grid grid--2">
+          <div class="box">
+            <p class="box__head">Ya construido</p>
+            <ul class="incl incl--yes">
+              <li>Punto de venta y cobro</li>
+              <li>Venta sin conexión con sincronización automática</li>
+              <li>Folios de venta a prueba de fallas</li>
+              <li>Catálogo de productos y precios</li>
+              <li>Inventario y movimientos</li>
+              <li>Corte de caja</li>
+              <li>Reportes y pantalla de inicio</li>
+              <li>Usuarios y permisos por rol</li>
+            </ul>
+          </div>
+          <div class="box box--flat">
+            <p class="box__head">Por construir en este proyecto</p>
+            <ul class="incl incl--no">
+              <li>Venta por libra con decimales y báscula</li>
+              <li>Manejo separado de las dos sucursales</li>
+              <li>Historial y auditoría de movimientos</li>
+              <li>Clientes, cuentas de crédito y límites</li>
+              <li>Abonos y estados de cuenta por WhatsApp</li>
+              <li>Carga de catálogo real y capacitación</li>
+            </ul>
+            <p class="box__head" style="margin-top:20px">Módulo aparte · Menú y pedidos</p>
+            <ul class="incl incl--no">
+              <li>Menú digital público con precios del día</li>
+              <li>Pedidos en línea con peso variable</li>
+              <li>Avisos automáticos por WhatsApp</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 · Fases -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">06 — Plan de entrega</p>
+        <h2>Tres entregas, no una promesa</h2>
+        <p class="lede">Cada entrega se recibe funcionando y se firma al recibirla. <strong>Si algo no convence, se detiene ahí</strong> — no hay que esperar meses para ver resultados. <strong>Mes y medio</strong> del arranque a las dos sucursales operando.</p>
+
+        <div class="phase">
+          <div>
+            <span class="phase__tag">Arranque</span>
+            <span class="phase__when">A la firma</span>
+          </div>
+          <div>
+            <h3 class="phase__name">Se compra el equipo y arranca el trabajo</h3>
+            <p class="phase__desc">Con el anticipo se compran las dos computadoras y las dos impresoras, y se reserva el servidor. El equipo queda a nombre de DevPilots hasta el pago total.</p>
+          </div>
+          <div class="phase__pay">Q15,280<small>50%</small></div>
+        </div>
+
+        <div class="phase">
+          <div>
+            <span class="phase__tag">Entrega 1</span>
+            <span class="phase__when">Día 25</span>
+          </div>
+          <div>
+            <h3 class="phase__name">Sistema listo y catálogo cargado</h3>
+            <p class="phase__desc">El sistema desplegado y configurado, con los cortes y precios reales del negocio ya cargados, y la venta por libra funcionando de principio a fin.</p>
+          </div>
+          <div class="phase__pay">—<small>sin pago</small></div>
+        </div>
+
+        <div class="phase">
+          <div>
+            <span class="phase__tag">Entrega 2</span>
+            <span class="phase__when">Día 38</span>
+          </div>
+          <div>
+            <h3 class="phase__name">Las Minas cobrando</h3>
+            <p class="phase__desc">Equipo instalado, sistema operando, corte de caja funcionando y el personal de la sucursal ya capacitado. Desde aquí ya se está cobrando con el sistema.</p>
+          </div>
+          <div class="phase__pay">Q7,640<small>25%</small></div>
+        </div>
+
+        <div class="phase">
+          <div>
+            <span class="phase__tag">Entrega 3</span>
+            <span class="phase__when">Día 45</span>
+          </div>
+          <div>
+            <h3 class="phase__name">La Hermita cobrando</h3>
+            <p class="phase__desc">La segunda sucursal instalada y capacitada, las dos operando por separado y el dueño viendo ambas en una sola pantalla.</p>
+          </div>
+          <div class="phase__pay">Q7,640<small>25%</small></div>
+        </div>
+
+        <p class="footnote">Los tiempos corren a partir de la firma, del anticipo y de recibir la lista de productos y precios. La capacitación es en sesiones de una hora, las que hagan falta, durante la instalación y el mes siguiente a cada sucursal.</p>
+      </div>
+    </section>
+
+    <!-- 12 · Inversión -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">07 — Inversión</p>
+        <div class="split">
+          <div>
+            <div class="price">
+              <span class="price__fig">Q30,560</span>
+              <span class="price__unit">sistema completo · pago único<br>equivale a US$4,000</span>
+            </div>
+            <p class="lede">Incluye el sistema para las dos sucursales <strong>con el fiado con control ya adentro</strong>, <strong>las dos computadoras y las dos impresoras de tickets</strong>, la instalación en sitio, la carga del catálogo real, la capacitación del personal y <strong>el servidor, el dominio y los respaldos del primer año</strong>.</p>
+            <div class="grid grid--2">
+              <div class="stat">
+                <span class="stat__fig">50 / 25 / 25</span>
+                <span class="stat__lab">anticipo a la firma, y el resto contra cada sucursal funcionando.</span>
+              </div>
+              <div class="stat">
+                <span class="stat__fig">Q250</span>
+                <span class="stat__lab">al mes, a partir del segundo año: servidor, respaldos diarios, dominio y soporte.</span>
+              </div>
+            </div>
+
+            <div class="addon">
+              <span class="addon__tag">Módulo aparte · a futuro</span>
+              <p class="addon__desc">El fiado con control ya viene dentro del paquete. Lo único que se cotiza aparte es el menú digital, y se arranca cuando el mostrador ya esté operando.</p>
+              <div class="addon__items addon__items--one">
+
+                <div class="addon__item">
+                  <h3 class="addon__name">Menú digital y pedidos</h3>
+                  <p class="addon__text">Catálogo público con precios del día, pedidos desde el celular con peso variable, pantalla de pedidos en sucursal y avisos automáticos por WhatsApp.</p>
+                  <div class="reveal" data-reveal>
+                    <button class="reveal__btn" type="button" aria-expanded="false">Ver inversión <span>&rarr;</span></button>
+                    <div class="reveal__val" hidden>
+                      <span class="reveal__fig">Q10,000</span>
+                      <span class="reveal__unit">precio de referencia<br>abierto a negociación</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              <p class="addon__note">El precio del menú digital es de referencia y se acuerda al contratarlo. El costo de mensajería de WhatsApp se factura aparte, según consumo.</p>
+            </div>
+          </div>
+
+          <div class="box">
+            <p class="box__head">Contra qué se compara</p>
+            <ul class="feats">
+              <li><span class="mk">01</span><span><b>Un POS de renta</b> cuesta entre Q310 y Q620 al mes por sucursal, para siempre, y no trae ni fiado ni pedidos en línea. En tres años pasan de <b>Q33,000</b> en renta, sin quedarse con nada.</span></li>
+              <li><span class="mk">02</span><span><b>El fiado sin control.</b> Si hay cuentas viejas que hoy no se están cobrando, recuperar una parte paga el sistema completo.</span></li>
+              <li><span class="mk">03</span><span><b>El tiempo del dueño.</b> Las horas que hoy se van en contestar pedidos y sacar cuentas a mano.</span></li>
+            </ul>
+          </div>
+        </div>
+        <p class="footnote">El sistema se entrega bajo licencia de uso para las dos sucursales, sin renta obligatoria durante el primer año ni cobro por número de tickets. Las computadoras y las impresoras pasan a ser del negocio con el pago total. El precio equivale a US$4,000.00 al tipo de cambio de referencia; el pago se hace en dólares o en quetzales al tipo de cambio del día de cada pago.</p>
+      </div>
+    </section>
+
+    <!-- 13 · Siguiente paso -->
+    <section class="slide">
+      <div class="inner">
+        <p class="eyebrow">08 — Para arrancar</p>
+        <h2>Lo que sigue</h2>
+        <div class="steps-final">
+          <div class="step-final">
+            <span class="step-final__n">1</span>
+            <div>
+              <p class="step-final__t">Confirmar el alcance y firmar</p>
+              <p class="step-final__d">Se ajusta lo que haga falta de esta propuesta y se define la fecha de arranque.</p>
+            </div>
+          </div>
+          <div class="step-final">
+            <span class="step-final__n">2</span>
+            <div>
+              <p class="step-final__t">Entregar la lista de productos y precios</p>
+              <p class="step-final__d">Los cortes que se venden en cada sucursal, con su precio por libra. Es lo único que se necesita del negocio para empezar.</p>
+            </div>
+          </div>
+          <div class="step-final">
+            <span class="step-final__n">3</span>
+            <div>
+              <p class="step-final__t">Primera entrega en menos de un mes</p>
+              <p class="step-final__d">A los 25 días el sistema listo con el catálogo cargado, y al día 45 las dos sucursales cobrando con el personal capacitado.</p>
+            </div>
+          </div>
+        </div>
+        <div class="sig">
+          <span>Propuesta válida <b>30 días</b></span>
+          <span>Preparó <b>DevPilots</b></span>
+          <span>Agosto <b>2026</b></span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="controls" aria-label="Navegación de diapositivas">
+    <div class="dots" id="dots"></div>
+    <span class="hint">← → para navegar</span>
+    <div class="arrows">
+      <button class="arrow" id="prev" type="button" aria-label="Diapositiva anterior">←&nbsp; Atrás</button>
+      <button class="arrow" id="next" type="button" aria-label="Siguiente diapositiva">Siguiente &nbsp;→</button>
+    </div>
+  </nav>
+</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var stage = document.getElementById('stage');
+    var dotsWrap = document.getElementById('dots');
+    var railFill = document.getElementById('railFill');
+    var cNow = document.getElementById('cNow');
+    var cTot = document.getElementById('cTot');
+    var prevBtn = document.getElementById('prev');
+    var nextBtn = document.getElementById('next');
+    var i = 0;
+
+    cTot.textContent = String(slides.length);
+
+    slides.forEach(function (_, n) {
+      var d = document.createElement('button');
+      d.type = 'button';
+      d.className = 'dot';
+      d.setAttribute('aria-label', 'Ir a la diapositiva ' + (n + 1));
+      d.addEventListener('click', function () { go(n); });
+      dotsWrap.appendChild(d);
+    });
+    var dots = Array.prototype.slice.call(dotsWrap.children);
+
+    function go(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+      dots.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
+      cNow.textContent = String(i + 1);
+      railFill.style.width = ((i + 1) / slides.length * 100) + '%';
+      prevBtn.disabled = i === 0;
+      nextBtn.disabled = i === slides.length - 1;
+      var active = slides[i];
+      if (active) active.scrollTop = 0;
+    }
+
+    prevBtn.addEventListener('click', function () { go(i - 1); });
+    nextBtn.addEventListener('click', function () { go(i + 1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') { go(i + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(i - 1); e.preventDefault(); }
+      else if (e.key === ' ' && !/^(BUTTON|A|INPUT)$/.test(document.activeElement.tagName)) { go(i + 1); e.preventDefault(); }
+      else if (e.key === 'Home') { go(0); e.preventDefault(); }
+      else if (e.key === 'End') { go(slides.length - 1); e.preventDefault(); }
+    });
+
+    var x0 = null, y0 = null;
+    stage.addEventListener('touchstart', function (e) {
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    stage.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0;
+      var dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) { go(dx < 0 ? i + 1 : i - 1); }
+      x0 = null; y0 = null;
+    }, { passive: true });
+
+    go(0);
+  })();
+</script>
+<script>
+  document.querySelectorAll('[data-reveal]').forEach(function (box) {
+    var btn = box.querySelector('.reveal__btn');
+    var val = box.querySelector('.reveal__val');
+    if (!btn || !val) return;
+    btn.addEventListener('click', function () {
+      val.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      btn.hidden = true;
+    });
+  });
+</script>
