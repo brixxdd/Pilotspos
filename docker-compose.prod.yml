@@ -40,6 +40,7 @@ services:
       COOKIE_SECRET: ${COOKIE_SECRET}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-pilotspos_session}
       CUSTOMER_COOKIE_NAME: ${CUSTOMER_COOKIE_NAME:-pilotspos_customer}
+      DRIVER_COOKIE_NAME: ${DRIVER_COOKIE_NAME:-pilotspos_driver}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
       CORS_ORIGIN: ${PUBLIC_ORIGIN}
       # Detrás de Nginx: sin esto el rate limiting ve una sola IP para todos y

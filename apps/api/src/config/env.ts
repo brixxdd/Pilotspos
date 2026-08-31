@@ -16,6 +16,7 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().min(16, "COOKIE_SECRET debe tener al menos 16 caracteres"),
   SESSION_COOKIE_NAME: z.string().default("pilotspos_session"),
   CUSTOMER_COOKIE_NAME: z.string().default("pilotspos_customer"),
+  DRIVER_COOKIE_NAME: z.string().default("pilotspos_driver"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   /**

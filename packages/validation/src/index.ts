@@ -311,6 +311,13 @@ export type MenuOrderUpdateInput = z.infer<typeof menuOrderUpdateSchema>;
 export const driverCreateSchema = z.object({
   name: z.string().trim().min(2, "El nombre es requerido").max(120),
   phone: customerPhoneSchema,
+  /** PIN de 4 a 8 dígitos para entrar a su portal. Lo asigna el mostrador. */
+  pin: z
+    .string()
+    .trim()
+    .min(4, "El PIN debe tener al menos 4 caracteres")
+    .max(8, "El PIN no puede pasar de 8 caracteres")
+    .regex(/^\d+$/, "El PIN debe ser numérico"),
 });
 export type DriverCreateInput = z.infer<typeof driverCreateSchema>;
 
@@ -318,8 +325,22 @@ export const driverUpdateSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   phone: customerPhoneSchema.optional(),
   active: z.boolean().optional(),
+  pin: z
+    .string()
+    .trim()
+    .min(4, "El PIN debe tener al menos 4 caracteres")
+    .max(8, "El PIN no puede pasar de 8 caracteres")
+    .regex(/^\d+$/, "El PIN debe ser numérico")
+    .optional(),
 });
 export type DriverUpdateInput = z.infer<typeof driverUpdateSchema>;
+
+/** Login del repartidor en su portal. */
+export const driverLoginSchema = z.object({
+  phone: customerPhoneSchema,
+  pin: z.string().trim().min(1, "El PIN es requerido").max(8),
+});
+export type DriverLoginInput = z.infer<typeof driverLoginSchema>;
 
 /** Confirmación de entrega que manda el repartidor desde el QR del ticket. */
 export const deliveryConfirmSchema = z.object({

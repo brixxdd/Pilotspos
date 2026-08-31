@@ -57,6 +57,13 @@
       "when": 1788139369215,
       "tag": "0007_stormy_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788140172594,
+      "tag": "0008_spooky_amphibian",
+      "breakpoints": true
     }
   ]
 }

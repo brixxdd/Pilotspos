@@ -1,14 +1,17 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { db, schema } from "../../shared/db.js";
-import { ConflictError, NotFoundError } from "../../shared/errors.js";
+import { ConflictError, NotFoundError, UnauthorizedError } from "../../shared/errors.js";
 import { fromQuantity } from "../../shared/numeric.js";
 import type {
   DeliveryConfirmInput,
   DeliveryReceivedInput,
   DriverCreateInput,
+  DriverLoginInput,
   DriverUpdateInput,
 } from "@pilotspos/validation";
-import type { Driver } from "@pilotspos/types";
+import type { Driver, DriverDeliveryRecord, SessionDriver } from "@pilotspos/types";
+import { createDriverSession, purgeExpiredDriverSessions } from "./session.service.js";
 
 // ---------------------------------------------------------------------------
 // Vista pública de la entrega (el repartidor abre el QR del ticket)
@@ -204,9 +207,11 @@ export async function createDriver(organizationId: string, input: DriverCreateIn
     .limit(1);
   if (existing) throw new ConflictError("Ya hay un repartidor con ese teléfono");
 
+  const pinHash = await bcrypt.hash(input.pin, 10);
+
   const [created] = await db
     .insert(schema.drivers)
-    .values({ organizationId, name: input.name, phone: input.phone })
+    .values({ organizationId, name: input.name, phone: input.phone, pinHash })
     .returning();
   if (!created) throw new Error("No se pudo crear el repartidor");
   return toDriver(created);
@@ -244,6 +249,7 @@ export async function updateDriver(
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.phone !== undefined ? { phone: input.phone } : {}),
       ...(input.active !== undefined ? { active: input.active } : {}),
+      ...(input.pin !== undefined ? { pinHash: await bcrypt.hash(input.pin, 10) } : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(schema.drivers.id, id), eq(schema.drivers.organizationId, organizationId)))
@@ -251,4 +257,102 @@ export async function updateDriver(
 
   if (!updated) throw new NotFoundError("Repartidor no encontrado");
   return toDriver(updated);
+}
+
+// ---------------------------------------------------------------------------
+// Portal del repartidor (/r)
+// ---------------------------------------------------------------------------
+
+/**
+ * Login del repartidor: teléfono + PIN. Mismo mensaje si el teléfono no existe
+ * o el PIN no coincide, para no revelar qué teléfonos son repartidores.
+ */
+export async function loginDriver(input: DriverLoginInput) {
+  const genericError = () => new UnauthorizedError("Teléfono o PIN incorrectos");
+
+  const [driver] = await db
+    .select({
+      id: schema.drivers.id,
+      name: schema.drivers.name,
+      phone: schema.drivers.phone,
+      pinHash: schema.drivers.pinHash,
+      active: schema.drivers.active,
+      organizationId: schema.drivers.organizationId,
+      organizationName: schema.organizations.name,
+    })
+    .from(schema.drivers)
+    .innerJoin(schema.organizations, eq(schema.organizations.id, schema.drivers.organizationId))
+    .where(and(eq(schema.drivers.phone, input.phone), eq(schema.drivers.active, true)))
+    .limit(1);
+
+  if (!driver || !driver.pinHash) throw genericError();
+  const pinMatches = await bcrypt.compare(input.pin, driver.pinHash);
+  if (!pinMatches) throw genericError();
+
+  await purgeExpiredDriverSessions();
+
+  const { token, expiresAt } = await createDriverSession({
+    driverId: driver.id,
+    organizationId: driver.organizationId,
+  });
+
+  return {
+    token,
+    expiresAt,
+    driver: {
+      id: driver.id,
+      name: driver.name,
+      phone: driver.phone,
+      organizationId: driver.organizationId,
+      organizationName: driver.organizationName,
+    } satisfies SessionDriver,
+  };
+}
+
+/**
+ * Historial de entregas del repartidor en su portal. Solo las que él registró
+ * (driver_id = él); el mostrador ve el mismo detalle en /orders.
+ */
+export async function listDriverDeliveries(
+  organizationId: string,
+  driverId: string,
+): Promise<DriverDeliveryRecord[]> {
+  const rows = await db
+    .select({
+      id: schema.menuOrders.id,
+      orderNumber: schema.menuOrders.orderNumber,
+      branchName: schema.branches.name,
+      customerName: schema.menuOrders.customerName,
+      customerPhone: schema.menuOrders.customerPhone,
+      addressLine: schema.menuOrders.addressLine,
+      estimatedTotal: schema.menuOrders.estimatedTotal,
+      status: schema.menuOrders.status,
+      deliveredAt: schema.menuOrders.deliveredAt,
+      customerConfirmedAt: schema.menuOrders.customerConfirmedAt,
+      createdAt: schema.menuOrders.createdAt,
+    })
+    .from(schema.menuOrders)
+    .innerJoin(schema.branches, eq(schema.branches.id, schema.menuOrders.branchId))
+    .where(
+      and(
+        eq(schema.menuOrders.organizationId, organizationId),
+        eq(schema.menuOrders.driverId, driverId),
+      ),
+    )
+    .orderBy(desc(schema.menuOrders.createdAt))
+    .limit(200);
+
+  return rows.map((row) => ({
+    id: row.id,
+    orderNumber: row.orderNumber,
+    branchName: row.branchName,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone,
+    addressLine: row.addressLine,
+    estimatedTotal: fromQuantity(row.estimatedTotal),
+    status: row.status,
+    deliveredAt: row.deliveredAt ? row.deliveredAt.toISOString() : null,
+    customerConfirmedAt: row.customerConfirmedAt ? row.customerConfirmedAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+  }));
 }

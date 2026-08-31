@@ -4,6 +4,7 @@ import { registerSecurityPlugins } from "./plugins/security.js";
 import { registerErrorHandler } from "./shared/error-handler.js";
 import { authContextPlugin } from "./middleware/auth.js";
 import { customerContextPlugin } from "./modules/customers/routes.js";
+import { driverContextPlugin } from "./modules/deliveries/routes.js";
 import { registerModules } from "./modules/index.js";
 
 async function main() {
@@ -21,6 +22,7 @@ async function main() {
   await registerSecurityPlugins(app);
   await app.register(authContextPlugin);
   await app.register(customerContextPlugin);
+  await app.register(driverContextPlugin);
   registerErrorHandler(app);
   await registerModules(app);
 

@@ -420,3 +420,27 @@ export interface Driver {
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }
+
+/** Lo que el repartidor ve al entrar a su portal (/r). */
+export interface SessionDriver {
+  id: UUID;
+  name: string;
+  phone: string;
+  organizationId: UUID;
+  organizationName: string;
+}
+
+/** Entrega del historial del repartidor en su portal. */
+export interface DriverDeliveryRecord {
+  id: UUID;
+  orderNumber: string;
+  branchName: string;
+  customerName: string;
+  customerPhone: string;
+  addressLine: string | null;
+  estimatedTotal: number;
+  status: OrderStatus;
+  deliveredAt: ISODateString | null;
+  customerConfirmedAt: ISODateString | null;
+  createdAt: ISODateString;
+}

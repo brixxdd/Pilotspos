@@ -109,6 +109,7 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 11 — Menú digital público y fiado (cuenta de cliente final, carrito persistente, pedido por WhatsApp, pedidos como registros, pantalla de crédito para el mostrador)
 - [x] Fase 12 — Importación de catálogo (CSV/Excel), backups y tests automatizados
 - [x] Fase 13 — Ticket térmico con datos de caja/cajero y reimpresión en `/history`; entrega a domicilio con QR (`/d/[token]`) que vincula al repartidor y deja rastro de quién entregó qué y cuándo
+- [x] Fase 14 — Doble confirmación de entrega (repartidor + cliente) y portal del repartidor (`/r`) con login por PIN, perfil y su historial de entregas
 
 Documentación adicional: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (arquitectura y decisiones), [`DATABASE.md`](./DATABASE.md) (schema y migraciones), [`API.md`](./API.md) (referencia de endpoints), [`DEVELOPMENT.md`](./DEVELOPMENT.md) (setup, variables de entorno, checklist de seguridad, guía de producción), [`deploy/README.md`](./deploy/README.md) (despliegue, backups y rotación de credenciales).
 

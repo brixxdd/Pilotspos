@@ -97,8 +97,17 @@ export function DriversClient({ initialDrivers }: { initialDrivers: Driver[] }) 
             {...register("phone")}
             error={errors.phone?.message}
           />
+          <Input
+            label="PIN del portal"
+            type="password"
+            inputMode="numeric"
+            placeholder="4 dígitos"
+            {...register("pin")}
+            error={errors.pin?.message}
+          />
           <p className="text-xs text-muted">
-            El repartidor confirma la entrega escribiendo este teléfono en el QR del ticket.
+            El repartidor confirma la entrega con su teléfono en el QR, y entra a su portal en{" "}
+            <span className="font-mono">/r</span> con este teléfono y el PIN.
           </p>
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
