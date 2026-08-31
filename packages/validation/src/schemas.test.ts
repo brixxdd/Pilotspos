@@ -4,6 +4,7 @@ import {
   customerPhoneSchema,
   deliveryConfirmSchema,
   deliveryReceivedSchema,
+  driverPhoneSchema,
   menuOrderCreateSchema,
   productCreateSchema,
   productImportRowSchema,
@@ -88,6 +89,19 @@ describe("productImportRowSchema", () => {
     });
     expect(parsed.success).toBe(true);
     expect(parsed.success && "categoryName" in parsed.data).toBe(true);
+  });
+});
+
+describe("driverPhoneSchema — teléfono internacional de repartidor", () => {
+  it("acepta números internacionales y los normaliza a dígitos", () => {
+    expect(driverPhoneSchema.parse("+52 962 600 2508")).toBe("529626002508");
+    expect(driverPhoneSchema.parse("+529626002508")).toBe("529626002508");
+    expect(driverPhoneSchema.parse("9626002508")).toBe("9626002508");
+    expect(driverPhoneSchema.parse("7777 1234")).toBe("77771234");
+  });
+
+  it("rechaza números demasiado cortos", () => {
+    expect(driverPhoneSchema.safeParse("1234567").success).toBe(false);
   });
 });
 

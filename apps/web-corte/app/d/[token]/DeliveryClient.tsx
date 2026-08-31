@@ -56,9 +56,9 @@ export function DeliveryClient({ token }: { token: string }) {
   }, [token]);
 
   async function confirm() {
-    const normalized = phone.replace(/[\s-]/g, "");
-    if (!/^\d{8}$/.test(normalized)) {
-      setError("Escribe tu teléfono a 8 dígitos (ej. 5512 3456)");
+    const normalized = phone.replace(/[\s-()]/g, "");
+    if (!/^\d{8,15}$/.test(normalized)) {
+      setError("Escribe tu teléfono con su código de país (ej. +52 962 600 2508)");
       return;
     }
     setSubmitting(true);
@@ -77,8 +77,8 @@ export function DeliveryClient({ token }: { token: string }) {
   }
 
   async function confirmReceived() {
-    const normalized = phone.replace(/[\s-]/g, "");
-    if (!/^\d{8}$/.test(normalized)) {
+    const normalized = phone.replace(/[\s-()]/g, "");
+    if (!/^\d{8,15}$/.test(normalized)) {
       setError("Escribe tu teléfono a 8 dígitos (ej. 5512 3456)");
       return;
     }

@@ -51,6 +51,23 @@ export const customerLoginSchema = z.object({
 });
 export type CustomerLoginInput = z.infer<typeof customerLoginSchema>;
 
+/**
+ * Teléfono de repartidor: acepta números internacionales (el repartidor puede
+ * venir de otra región). Se normaliza a dígitos sin el signo `+` — el mostrador
+ * guarda exactamente lo que el repartidor escribirá después en el QR y en el
+ * portal (/r).
+ */
+export const driverPhoneSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/[\s-()]/g, ""))
+  .pipe(
+    z
+      .string()
+      .regex(/^\+?\d{8,15}$/, "Teléfono inválido")
+      .transform((value) => value.replace(/^\+/, "")),
+  );
+
 export const customerProfileUpdateSchema = customerRegisterSchema
   .pick({ firstName: true, lastName: true, addressLine: true, addressReferences: true })
   .partial();
@@ -310,7 +327,7 @@ export type MenuOrderUpdateInput = z.infer<typeof menuOrderUpdateSchema>;
 
 export const driverCreateSchema = z.object({
   name: z.string().trim().min(2, "El nombre es requerido").max(120),
-  phone: customerPhoneSchema,
+  phone: driverPhoneSchema,
   /** PIN de 4 a 8 dígitos para entrar a su portal. Lo asigna el mostrador. */
   pin: z
     .string()
@@ -323,7 +340,7 @@ export type DriverCreateInput = z.infer<typeof driverCreateSchema>;
 
 export const driverUpdateSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
-  phone: customerPhoneSchema.optional(),
+  phone: driverPhoneSchema.optional(),
   active: z.boolean().optional(),
   pin: z
     .string()
@@ -337,7 +354,7 @@ export type DriverUpdateInput = z.infer<typeof driverUpdateSchema>;
 
 /** Login del repartidor en su portal. */
 export const driverLoginSchema = z.object({
-  phone: customerPhoneSchema,
+  phone: driverPhoneSchema,
   pin: z.string().trim().min(1, "El PIN es requerido").max(8),
 });
 export type DriverLoginInput = z.infer<typeof driverLoginSchema>;
@@ -345,7 +362,7 @@ export type DriverLoginInput = z.infer<typeof driverLoginSchema>;
 /** Confirmación de entrega que manda el repartidor desde el QR del ticket. */
 export const deliveryConfirmSchema = z.object({
   token: z.string().min(16).max(64),
-  phone: customerPhoneSchema,
+  phone: driverPhoneSchema,
 });
 export type DeliveryConfirmInput = z.infer<typeof deliveryConfirmSchema>;
 
