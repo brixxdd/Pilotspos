@@ -61,3 +61,51 @@ para todos los visitantes.
 cd /opt/corte-pos && git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+## Backup y restauración
+
+Los backups van a `/opt/backups/corte-pos/` (fuera del volumen de Postgres).
+Instalar el cron **una vez**:
+
+```bash
+mkdir -p /opt/backups/corte-pos
+crontab -e
+#   30 4 * * * /opt/corte-pos/deploy/backup.sh >> /var/log/corte-backup.log 2>&1
+```
+
+- `backup.sh` hace `pg_dump` por la red interna de Docker (no bloquea
+  escrituras), comprime y rota a 14 días. Probar el primer día y revisar que el
+  archivo no esté vacío.
+- `restore.sh <archivo.sql.gz>` detiene la API, restaura y la vuelve a
+  arrancar. **Sobrescribe la base actual** — solo para desastres reales.
+
+> Pendiente recomendado: copia fuera del VPS (p. ej. `rclone` a un bucket) para
+> que un fallo de disco no se lleve también los backups.
+
+## Seguridad: rotar credenciales del seed
+
+El seed crea `admin / Admin123!`, `encargado / Encargado123!` y
+`cajero01 / Cajero123!`. Están activas **hoy** en producción. Antes de la
+primera venta real:
+
+1. Entrar UNA vez con `admin / Admin123!` en la computadora del dueño.
+2. Crear desde `/users` los usuarios reales con contraseñas fuertes.
+3. Desactivar los tres del seed (botón "Desactivar" en `/users`).
+4. Verificar que `Admin123!` ya no entra.
+
+Alternativa por SQL (si nadie quiere tocar la UI):
+
+```bash
+# genera un hash bcrypt y lo aplica
+docker compose -f docker-compose.prod.yml exec -T api node -e '
+  const bcrypt = require("bcryptjs");
+  const hash = bcrypt.hashSync("NuevaPasswordFuerte!", 10);
+  console.log(hash);
+'
+# pegar el hash en el UPDATE siguiente
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "UPDATE users SET password_hash = '<hash>', active = false WHERE username IN ('admin','encargado','cajero01');"
+```
+
+También cambiar `MENU_WHATSAPP_NUMBER` en `/opt/corte-pos/.env` al número real
+de la carnicería y recrear el contenedor web (`docker compose up -d --build`).

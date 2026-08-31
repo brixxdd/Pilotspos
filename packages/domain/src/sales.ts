@@ -122,7 +122,12 @@ export type PermissionAction =
   | "sales.cancel"
   | "reports.view"
   | "users.manage"
-  | "settings.manage";
+  | "settings.manage"
+  | "customers.view"
+  | "customers.manage"
+  | "orders.view"
+  | "orders.manage"
+  | "drivers.manage";
 
 const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
   ADMIN: [
@@ -137,6 +142,11 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
     "reports.view",
     "users.manage",
     "settings.manage",
+    "customers.view",
+    "customers.manage",
+    "orders.view",
+    "orders.manage",
+    "drivers.manage",
   ],
   MANAGER: [
     "products.manage",
@@ -147,11 +157,57 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
     "sales.discount",
     "sales.cancel",
     "reports.view",
+    "customers.view",
+    "customers.manage",
+    "orders.view",
+    "orders.manage",
+    "drivers.manage",
   ],
-  CASHIER: ["sales.create"],
+  CASHIER: ["sales.create", "customers.view", "orders.view"],
 };
 
 /** Única fuente de verdad para autorización por rol. Debe evaluarse en el backend. */
 export function canPerformAction(role: UserRole, action: PermissionAction): boolean {
   return ROLE_PERMISSIONS[role]?.includes(action) ?? false;
+}
+
+// ---------------------------------------------------------------------------
+// Pago partido crédito + efectivo (menú digital)
+// ---------------------------------------------------------------------------
+
+export type PaymentChoice = "CASH" | "CREDIT" | "MIXED";
+
+export interface PaymentSplit {
+  credit: number;
+  cash: number;
+}
+
+/** Redondeo a centavos: el crédito se parte en quetzales, no en fracciones. */
+function toCents2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Reparte un total entre crédito disponible y efectivo.
+ *
+ * La regla es siempre "no fiar más de lo que se tiene ni más de lo que vale
+ * el pedido": el crédito nunca excede `availableCredit` ni `total`, y el
+ * efectivo es siempre `total - credit` (nunca sale un negativo).
+ */
+export function computePaymentSplit(
+  total: number,
+  choice: PaymentChoice,
+  availableCredit: number,
+  creditAmount: number,
+): PaymentSplit {
+  const available = Math.max(0, availableCredit);
+  if (choice === "CREDIT") {
+    const credit = toCents2(Math.min(available, total));
+    return { credit, cash: toCents2(total - credit) };
+  }
+  if (choice === "MIXED") {
+    const credit = toCents2(Math.min(Math.max(creditAmount, 0), available, total));
+    return { credit, cash: toCents2(total - credit) };
+  }
+  return { credit: 0, cash: toCents2(total) };
 }

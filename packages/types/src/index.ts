@@ -95,6 +95,23 @@ export interface Customer {
   updatedAt: ISODateString;
 }
 
+/** Fila de la lista de clientes que ve el personal (mostrador y panel). */
+export interface CustomerListItem {
+  id: UUID;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  phone: string;
+  addressLine: string | null;
+  addressReferences: string | null;
+  creditLimit: number;
+  balance: number;
+  /** Cuánto puede fiar hoy: `creditLimit - balance`, nunca negativo. */
+  availableCredit: number;
+  active: boolean;
+  createdAt: ISODateString;
+}
+
 /** Lo que el menú digital sabe del cliente que tiene la sesión abierta. */
 export interface SessionCustomer {
   id: UUID;
@@ -334,4 +351,69 @@ export interface Paginated<T> {
   total: number;
   page: number;
   pageSize: number;
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos del menú digital
+// ---------------------------------------------------------------------------
+
+export const ORDER_STATUSES = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const ORDER_PAYMENT_CHOICES = ["CASH", "CREDIT", "MIXED"] as const;
+export type OrderPaymentChoice = (typeof ORDER_PAYMENT_CHOICES)[number];
+
+/** Renglón del pedido, snapshot del catálogo en el momento de pedir. */
+export interface MenuOrderItem {
+  productId: UUID;
+  name: string;
+  unit: ProductUnit;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+}
+
+/** Pedido hecho desde el menú digital. El crédito pedido queda apuntado, no reservado. */
+export interface MenuOrder {
+  id: UUID;
+  organizationId: UUID;
+  branchId: UUID;
+  branchName: string | null;
+  orderNumber: string;
+  customerId: UUID | null;
+  customerName: string;
+  customerPhone: string;
+  addressLine: string | null;
+  addressReferences: string | null;
+  items: MenuOrderItem[];
+  paymentChoice: OrderPaymentChoice;
+  requestedCredit: number;
+  requestedCash: number;
+  estimatedTotal: number;
+  status: OrderStatus;
+  note: string | null;
+  whatsappSentAt: ISODateString | null;
+  resolvedById: UUID | null;
+  resolvedByName: string | null;
+  resolvedAt: ISODateString | null;
+  /** Token opaco del QR de entrega. Solo lo tienen los pedidos confirmados o completados. */
+  deliveryToken: string | null;
+  driverId: UUID | null;
+  driverName: string | null;
+  deliveredAt: ISODateString | null;
+  createdAt: ISODateString;
+}
+
+// ---------------------------------------------------------------------------
+// Repartidores
+// ---------------------------------------------------------------------------
+
+export interface Driver {
+  id: UUID;
+  organizationId: UUID;
+  name: string;
+  phone: string;
+  active: boolean;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 }

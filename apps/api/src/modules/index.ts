@@ -8,7 +8,9 @@ import { registerCashRoutes } from "./cash/routes.js";
 import { registerSalesRoutes } from "./sales/routes.js";
 import { registerReportsRoutes } from "./reports/routes.js";
 import { registerMenuRoutes } from "./menu/routes.js";
-import { registerCustomerRoutes } from "./customers/routes.js";
+import { registerCustomerRoutes, registerStaffCustomerRoutes } from "./customers/routes.js";
+import { registerOrderRoutes } from "./orders/routes.js";
+import { registerDeliveryRoutes } from "./deliveries/routes.js";
 
 /**
  * Punto central de registro de rutas por módulo de negocio.
@@ -33,4 +35,11 @@ export async function registerModules(app: FastifyInstance) {
   // Cuentas de los clientes finales (menú digital y fiado). Sesión propia,
   // separada de la del personal — ver modules/customers/cookie.ts.
   await app.register(registerCustomerRoutes);
+  // Vista de clientes y fiado para el personal (mostrador y panel).
+  await app.register(registerStaffCustomerRoutes);
+  // Pedidos del menú digital: creación pública (con sesión de cliente) y
+  // gestión del mostrador (con sesión de personal).
+  await app.register(registerOrderRoutes);
+  // Entregas a domicilio: QR del repartidor (público) y gestión de repartidores (staff).
+  await app.register(registerDeliveryRoutes);
 }

@@ -1,10 +1,22 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
-import { ComingSoon } from "@/components/ComingSoon";
+import { cookies } from "next/headers";
+import { requirePermission } from "@/lib/guards";
+import { canPerformAction } from "@pilotspos/domain";
+import type { CustomerListItem } from "@pilotspos/types";
+import { ClientsClient } from "./ClientsClient";
+
+const API_URL = process.env.API_URL ?? "http://localhost:3001";
 
 export default async function ClientsPage() {
-  const user = await getSession();
-  if (!user) redirect("/login");
+  const user = await requirePermission("customers.view");
+  const canManage = canPerformAction(user.role, "customers.manage");
 
-  return <ComingSoon title="Clientes" phase="la siguiente fase (no existe todavía un modelo de clientes en el backend)" />;
+  const cookie = cookies().toString();
+  const response = await fetch(`${API_URL}/customers?pageSize=100`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+
+  const body = response.ok ? ((await response.json()) as { items: CustomerListItem[] }) : { items: [] };
+
+  return <ClientsClient initialCustomers={body.items} canManage={canManage} />;
 }

@@ -123,10 +123,13 @@ body {
     visibility: hidden;
   }
   #ticket-print-area,
-  #ticket-print-area * {
+  #ticket-print-area *,
+  #delivery-qr-area,
+  #delivery-qr-area * {
     visibility: visible;
   }
-  #ticket-print-area {
+  #ticket-print-area,
+  #delivery-qr-area {
     position: absolute;
     left: 0;
     top: 0;

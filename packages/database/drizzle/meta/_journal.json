@@ -36,6 +36,20 @@
       "when": 1787618668676,
       "tag": "0004_faithful_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788135461238,
+      "tag": "0005_calm_shatterstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788137253074,
+      "tag": "0006_flimsy_chameleon",
+      "breakpoints": true
     }
   ]
 }

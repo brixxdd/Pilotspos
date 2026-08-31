@@ -13,6 +13,7 @@ import { branches, organizations, registers } from "./organizations.js";
 import { cashSessions } from "./cash.js";
 import { products } from "./products.js";
 import { users } from "./users.js";
+import { menuOrders } from "./orders.js";
 
 export const saleStatusEnum = pgEnum("sale_status", ["COMPLETED", "CANCELED", "SUSPENDED"]);
 export const paymentMethodEnum = pgEnum("payment_method", ["CASH", "CARD", "TRANSFER", "MIXED"]);
@@ -47,6 +48,12 @@ export const sales = pgTable(
      * respuesta del primer intento se perdió (ver apps/api/.../sales/service.ts).
      */
     clientSaleId: uuid("client_sale_id"),
+    /**
+     * Pedido del menú digital al que pertenece esta venta, si el mostrador la
+     * cerró desde un pedido. Solo trazabilidad: el pedido y la venta son
+     * registros independientes.
+     */
+    menuOrderId: uuid("menu_order_id").references(() => menuOrders.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

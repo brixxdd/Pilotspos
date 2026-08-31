@@ -56,6 +56,26 @@ export const customerProfileUpdateSchema = customerRegisterSchema
   .partial();
 export type CustomerProfileUpdateInput = z.infer<typeof customerProfileUpdateSchema>;
 
+/** Búsqueda de clientes desde el mostrador/panel: por nombre o teléfono. */
+export const customerListQuerySchema = z.object({
+  search: z.string().trim().max(120).optional(),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(100).optional(),
+});
+export type CustomerListQuery = z.infer<typeof customerListQuerySchema>;
+
+/**
+ * Lo que el personal puede cambiar de un cliente: el techo del fiado y un
+ * ajuste al saldo. El saldo es "lo que debe" (positivo = debe); un ajuste
+ * negativo es un abono del cliente, uno positivo una carga extra. Nunca se
+ * permite dejar el saldo en negativo.
+ */
+export const customerCreditUpdateSchema = z.object({
+  creditLimit: z.number().nonnegative("El límite de crédito no puede ser negativo").optional(),
+  balanceAdjustment: z.number().optional(),
+});
+export type CustomerCreditUpdateInput = z.infer<typeof customerCreditUpdateSchema>;
+
 // ---------------------------------------------------------------------------
 // Usuarios
 // ---------------------------------------------------------------------------
@@ -137,6 +157,23 @@ export const categoryCreateSchema = z.object({
   name: z.string().min(1).max(80),
 });
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
+
+/**
+ * Renglón de importación masiva. Igual que `productCreateSchema`, pero la
+ * categoría se resuelve por NOMBRE (la hoja del cliente legacy no tiene UUIDs)
+ * y el servidor la crea si no existe.
+ */
+export const productImportRowSchema = productCreateSchema
+  .omit({ categoryId: true, supplierId: true })
+  .extend({
+    categoryName: z.string().trim().min(1).max(80).optional(),
+  });
+export type ProductImportRow = z.infer<typeof productImportRowSchema>;
+
+export const productImportSchema = z.object({
+  rows: z.array(productImportRowSchema).min(1, "La lista está vacía").max(500, "Máximo 500 productos por importación"),
+});
+export type ProductImportInput = z.infer<typeof productImportSchema>;
 
 // ---------------------------------------------------------------------------
 // Inventario
@@ -233,6 +270,63 @@ export const suspendSaleSchema = z.object({
   note: z.string().max(300).optional(),
 });
 export type SuspendSaleInput = z.infer<typeof suspendSaleSchema>;
+
+// ---------------------------------------------------------------------------
+// Pedidos del menú digital
+// ---------------------------------------------------------------------------
+
+/**
+ * Renglón de pedido tal como lo manda el cliente desde el menú. El precio NO
+ * viene del cliente: el servidor lo re-lee del catálogo para que nadie pueda
+ * pedir a un precio que no es el de hoy.
+ */
+export const menuOrderItemSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z
+    .number()
+    .positive("La cantidad debe ser mayor a 0")
+    .refine(hasWeightPrecision, WEIGHT_PRECISION_MESSAGE),
+});
+
+export const menuOrderCreateSchema = z.object({
+  items: z.array(menuOrderItemSchema).min(1, "El pedido está vacío").max(100),
+  paymentChoice: z.enum(["CASH", "CREDIT", "MIXED"]),
+  /** Cuánto quiere cargar a su cuenta. El servidor lo recorta a su disponible real. */
+  creditAmount: z.number().nonnegative().default(0),
+  cashAmount: z.number().nonnegative().default(0),
+});
+export type MenuOrderCreateInput = z.infer<typeof menuOrderCreateSchema>;
+
+/** Acciones del mostrador sobre un pedido: confirmar, cancelar, completar, anotar. */
+export const menuOrderUpdateSchema = z.object({
+  status: z.enum(["CONFIRMED", "CANCELLED", "COMPLETED"]).optional(),
+  note: z.string().trim().max(300).optional(),
+});
+export type MenuOrderUpdateInput = z.infer<typeof menuOrderUpdateSchema>;
+
+// ---------------------------------------------------------------------------
+// Repartidores y entregas
+// ---------------------------------------------------------------------------
+
+export const driverCreateSchema = z.object({
+  name: z.string().trim().min(2, "El nombre es requerido").max(120),
+  phone: customerPhoneSchema,
+});
+export type DriverCreateInput = z.infer<typeof driverCreateSchema>;
+
+export const driverUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  phone: customerPhoneSchema.optional(),
+  active: z.boolean().optional(),
+});
+export type DriverUpdateInput = z.infer<typeof driverUpdateSchema>;
+
+/** Confirmación de entrega que manda el repartidor desde el QR del ticket. */
+export const deliveryConfirmSchema = z.object({
+  token: z.string().min(16).max(64),
+  phone: customerPhoneSchema,
+});
+export type DeliveryConfirmInput = z.infer<typeof deliveryConfirmSchema>;
 
 // ---------------------------------------------------------------------------
 // Organizaciones / sucursales / cajas registradoras

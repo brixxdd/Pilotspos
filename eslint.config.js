@@ -25,6 +25,22 @@ export default tseslint.config(
     },
   },
   {
+    // El service worker corre en un Web Worker, no en el navegador ni en Node:
+    // ESLint no conoce `self`, `caches`, etc.
+    files: ["**/public/sw.js", "**/public/**/*worker*.js"],
+    languageOptions: {
+      globals: {
+        self: "readonly",
+        caches: "readonly",
+        URL: "readonly",
+        fetch: "readonly",
+        Response: "readonly",
+        Request: "readonly",
+        console: "readonly",
+      },
+    },
+  },
+  {
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "warn",

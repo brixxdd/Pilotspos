@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionCustomer } from "@pilotspos/types";
 import { CheckoutSheet, type PaymentChoice } from "./CheckoutSheet";
 import { clearCart, loadCart, reconcileCart, saveCart, type RestoredCart } from "@/lib/menu-cart";
+import { apiFetch, ApiClientError } from "@/lib/api-client";
 
 export interface PublicMenuItem {
   id: string;
@@ -115,6 +116,8 @@ export function MenuClient({
   const [restored, setRestored] = useState<RestoredCart | null>(null);
   // Cambia en cada toque para reiniciar la animación del contador.
   const [pulse, setPulse] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const cartScope = useRef({ org: menu.business.slug, branch: menu.branch.slug });
 
@@ -211,15 +214,45 @@ export function MenuClient({
   }
 
   function handleSend(payment: { choice: PaymentChoice; creditAmount: number; cashAmount: number }) {
-    const url = buildOrderUrl(payment);
-    if (!url) return;
-    // `noopener` explícito: `window.open` sin él deja al sitio destino con una
-    // referencia a esta pestaña.
-    window.open(url, "_blank", "noopener,noreferrer");
-    setCheckoutOpen(false);
-    setQuantities({});
-    setRestored(null);
-    clearCart(menu.business.slug, menu.branch.slug);
+    if (!customer) return;
+    setSending(true);
+    setSendError(null);
+
+    const items = selection.map(({ item, quantity }) => ({
+      productId: item.id,
+      quantity: quantity as number,
+    }));
+
+    // El pedido se guarda ANTES de abrir WhatsApp: si la escritura falla el
+    // carrito queda intacto y se le avisa, en vez de perder el pedido en la
+    // red. El crédito pedido queda registrado y lo confirma el mostrador.
+    apiFetch(`/public/menu/${menu.business.slug}/${menu.branch.slug}/orders`, {
+      method: "POST",
+      body: JSON.stringify({
+        items,
+        paymentChoice: payment.choice,
+        creditAmount: payment.creditAmount,
+        cashAmount: payment.cashAmount,
+      }),
+    })
+      .then(() => {
+        const url = buildOrderUrl(payment);
+        // `noopener` explícito: `window.open` sin él deja al sitio destino con
+        // una referencia a esta pestaña.
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        setCheckoutOpen(false);
+        setQuantities({});
+        setRestored(null);
+        clearCart(menu.business.slug, menu.branch.slug);
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof ApiClientError
+            ? error.message
+            : "No se pudo registrar el pedido. Revisa tu conexión e inténtalo de nuevo.";
+        setSendError(message);
+      })
+      .finally(() => setSending(false));
   }
 
   function emptyCart() {
@@ -747,6 +780,8 @@ export function MenuClient({
           }}
           onClose={() => setCheckoutOpen(false)}
           onSend={handleSend}
+          sending={sending}
+          sendError={sendError}
         />
       )}
     </div>

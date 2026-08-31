@@ -26,9 +26,12 @@ const ROLE_LABELS: Record<SessionUser["role"], string> = {
 const ADMIN_NAV_ITEMS = [
   { href: "/dashboard", label: "Panel", icon: HomeIcon },
   { href: "/sales", label: "Punto de Venta", icon: CartIcon },
+  { href: "/orders", label: "Pedidos", icon: ReceiptIcon },
   { href: "/products", label: "Productos", icon: BoxesIcon },
   { href: "/inventory", label: "Inventario", icon: BoxesIcon },
   { href: "/branches", label: "Sucursales", icon: StoreIcon },
+  { href: "/clients", label: "Clientes", icon: UsersIcon },
+  { href: "/drivers", label: "Repartidores", icon: CartIcon },
   { href: "/reports", label: "Reportes", icon: ChartIcon },
   { href: "/users", label: "Usuarios", icon: UsersIcon },
   { href: "/settings", label: "Configuración", icon: SettingsIcon },
@@ -39,8 +42,11 @@ const ADMIN_NAV_ITEMS = [
 const MANAGER_NAV_ITEMS = [
   { href: "/dashboard", label: "Panel", icon: HomeIcon },
   { href: "/sales", label: "Punto de Venta", icon: CartIcon },
+  { href: "/orders", label: "Pedidos", icon: ReceiptIcon },
   { href: "/products", label: "Productos", icon: BoxesIcon },
   { href: "/inventory", label: "Inventario", icon: BoxesIcon },
+  { href: "/clients", label: "Clientes", icon: UsersIcon },
+  { href: "/drivers", label: "Repartidores", icon: CartIcon },
   { href: "/cash", label: "Caja", icon: WalletIcon },
   { href: "/reports", label: "Reportes", icon: ChartIcon },
 ];
@@ -49,6 +55,7 @@ const MANAGER_NAV_ITEMS = [
 // Nada de catálogo, inventario, reportes ni otras sucursales.
 const CASHIER_NAV_ITEMS = [
   { href: "/sales", label: "Venta", icon: CartIcon },
+  { href: "/orders", label: "Pedidos", icon: ReceiptIcon },
   { href: "/cash", label: "Mi Caja", icon: WalletIcon },
   { href: "/history", label: "Mis Tickets", icon: ReceiptIcon },
   { href: "/clients", label: "Clientes", icon: UsersIcon },

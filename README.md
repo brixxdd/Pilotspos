@@ -1,6 +1,6 @@
-# PilotsPOS
+# Corte POS
 
-Punto de venta, inventario y gestión de caja para tiendas, minisúpers, abarrotes y comercios pequeños/medianos. Producto SaaS de **DevPilots**.
+Punto de venta, inventario, caja, fiado de clientes y **menú digital público** para carnicerías. Producto SaaS de **DevPilots**.
 
 ## Stack
 
@@ -14,8 +14,8 @@ Punto de venta, inventario y gestión de caja para tiendas, minisúpers, abarrot
 ```text
 pilotspos/
 ├── apps/
-│   ├── web/     Next.js — interfaz de usuario
-│   └── api/     Fastify — API de negocio
+│   ├── web-corte/   Next.js — app del mostrador + menú digital público
+│   └── api/         Fastify — API de negocio
 ├── packages/
 │   ├── types/       Tipos compartidos
 │   ├── validation/  Esquemas Zod
@@ -41,7 +41,7 @@ npm install
 cp .env.example .env
 
 # 3. Compilar los paquetes compartidos (types, validation, domain, database, ui)
-#    Requerido: apps/api y apps/web consumen su dist/, no su código fuente.
+#    Requerido: apps/api y apps/web-corte consumen su dist/, no su código fuente.
 #    Vuelve a ejecutarse cada vez que cambies algo dentro de packages/*.
 npm run build:packages
 
@@ -58,11 +58,11 @@ npm run db:seed
 # 7. Levantar la API (puerto 3001 por defecto)
 npm run dev:api
 
-# 8. En otra terminal, levantar el frontend (puerto 3000)
-npm run dev:web
+# 8. En otra terminal, levantar el frontend (puerto 3100)
+npm run dev:web-corte
 ```
 
-La web consume la API a través del proxy `/api/*` configurado en `apps/web/next.config.mjs` (ver `API_URL` en `.env`).
+La web consume la API a través del proxy `/api/*` configurado en `apps/web-corte/next.config.mjs` (ver `API_URL` en `.env`).
 
 > Si el puerto 3001 ya está en uso en tu máquina, cambia `API_PORT` en `.env` y `API_URL` correspondientemente.
 
@@ -80,15 +80,16 @@ Organización: **Mini Súper San José** · Sucursal: **Centro** · Cajas: **Caj
 ## Scripts principales
 
 ```bash
-npm run dev:web        # Next.js en modo desarrollo
-npm run dev:api        # Fastify en modo desarrollo (watch)
+npm run dev:web-corte   # Next.js en modo desarrollo
+npm run dev:api         # Fastify en modo desarrollo (watch)
 npm run build           # Build de producción de todos los workspaces
-npm run lint             # ESLint en todos los workspaces
-npm run typecheck        # Verificación de tipos en todos los workspaces
-npm run db:generate      # Generar migraciones desde el schema Drizzle
-npm run db:migrate       # Aplicar migraciones a PostgreSQL
-npm run db:seed          # Sembrar datos de desarrollo
-npm run db:studio        # Drizzle Studio (explorador visual de la BD)
+npm run lint            # ESLint en todos los workspaces
+npm run typecheck       # Verificación de tipos en todos los workspaces
+npm run test            # Tests (Vitest)
+npm run db:generate     # Generar migraciones desde el schema Drizzle
+npm run db:migrate      # Aplicar migraciones a PostgreSQL
+npm run db:seed         # Sembrar datos de desarrollo
+npm run db:studio       # Drizzle Studio (explorador visual de la BD)
 ```
 
 ## Estado del proyecto
@@ -104,12 +105,18 @@ Este proyecto se está reconstruyendo por fases. Estado actual:
 - [x] Fase 7 — Reportes y Dashboard (KPIs del día, ventas por fecha/método/cajero, top productos, cortes de caja)
 - [x] Fase 8 — UX (loading states, error boundaries, banner offline, sidebar responsive, Configuración)
 - [x] Fase 9 — Producción (documentación completa, checklist de seguridad, guía de build/deploy)
+- [x] Fase 10 — Vertical de carnicería (venta por libra, seed real con precios en quetzales, roles separados)
+- [x] Fase 11 — Menú digital público y fiado (cuenta de cliente final, carrito persistente, pedido por WhatsApp, pedidos como registros, pantalla de crédito para el mostrador)
+- [x] Fase 12 — Importación de catálogo (CSV/Excel), backups y tests automatizados
+- [x] Fase 13 — Ticket térmico con datos de caja/cajero y reimpresión en `/history`; entrega a domicilio con QR (`/d/[token]`) que vincula al repartidor y deja rastro de quién entregó qué y cuándo
 
-Documentación adicional: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (arquitectura y decisiones), [`DATABASE.md`](./DATABASE.md) (schema y migraciones), [`API.md`](./API.md) (referencia de endpoints), [`DEVELOPMENT.md`](./DEVELOPMENT.md) (setup, variables de entorno, checklist de seguridad, guía de producción).
+Documentación adicional: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (arquitectura y decisiones), [`DATABASE.md`](./DATABASE.md) (schema y migraciones), [`API.md`](./API.md) (referencia de endpoints), [`DEVELOPMENT.md`](./DEVELOPMENT.md) (setup, variables de entorno, checklist de seguridad, guía de producción), [`deploy/README.md`](./deploy/README.md) (despliegue, backups y rotación de credenciales).
 
 ## Seguridad
 
 - Sesiones server-side con cookies HTTP-only (no se usa `localStorage` para nada sensible).
 - Contraseñas con bcrypt.
 - Aislamiento estricto por `organizationId`, determinado siempre desde la sesión — nunca desde el cliente.
+- Un cliente final no es un usuario del sistema: sesión y cookie propias (`customer_sessions` / `pilotspos_customer`), sin `role` ni `branchId`.
+- La matriz de permisos vive en `@pilotspos/domain` y se evalúa en el backend; el frontend solo la usa para esconder rutas.
 - Ver notas de seguridad conocidas en `DEVELOPMENT.md` (Fase 9) respecto a las versiones fijadas de Next.js/React.

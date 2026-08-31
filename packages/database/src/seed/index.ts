@@ -24,6 +24,10 @@ const DEV_CASHIER_PASSWORD = "Cajero123!";
  */
 async function wipe() {
   console.log("Limpiando datos anteriores...");
+  await db.delete(schema.menuOrders);
+  await db.delete(schema.customerSessions);
+  await db.delete(schema.customers);
+  await db.delete(schema.drivers);
   await db.delete(schema.payments);
   await db.delete(schema.saleItems);
   await db.delete(schema.sales);

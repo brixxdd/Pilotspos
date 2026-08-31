@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { categoryCreateSchema, productCreateSchema, productUpdateSchema } from "@pilotspos/validation";
+import {
+  categoryCreateSchema,
+  productCreateSchema,
+  productImportSchema,
+  productUpdateSchema,
+} from "@pilotspos/validation";
 import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import {
   createProduct,
@@ -8,6 +13,7 @@ import {
   getCatalogSnapshot,
   getProductByBarcode,
   getProductById,
+  importProducts,
   listProducts,
   updateProduct,
 } from "./service.js";
@@ -95,6 +101,24 @@ export async function registerProductRoutes(app: FastifyInstance) {
       const category = await createCategory(request.authContext!.organizationId, input);
       reply.status(201);
       return { category };
+    },
+  );
+
+  app.post(
+    "/products/import",
+    { preHandler: requirePermission("products.manage") },
+    async (request, reply) => {
+      const input = productImportSchema.parse(request.body);
+      const result = await importProducts(
+        {
+          organizationId: request.authContext!.organizationId,
+          branchId: request.authContext!.branchId,
+          userId: request.authContext!.userId,
+        },
+        input.rows,
+      );
+      reply.status(201);
+      return result;
     },
   );
 }

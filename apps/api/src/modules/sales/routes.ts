@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { saleSchema, suspendSaleSchema, syncSaleSchema } from "@pilotspos/validation";
 import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import { getCurrentOpenSession } from "../cash/service.js";
@@ -12,6 +13,12 @@ import {
   recoverSuspendedSale,
   suspendSale,
 } from "./service.js";
+
+const listSalesQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(100).optional(),
+  userId: z.string().uuid().optional(),
+});
 
 export async function registerSalesRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
@@ -50,7 +57,8 @@ export async function registerSalesRoutes(app: FastifyInstance) {
   });
 
   app.get("/sales", async (request) => {
-    return listSales(request.authContext!.organizationId, request.query as { page?: number; pageSize?: number });
+    const query = listSalesQuerySchema.parse(request.query);
+    return listSales(request.authContext!.organizationId, query);
   });
 
   app.get<{ Params: { id: string } }>("/sales/:id", async (request) => {

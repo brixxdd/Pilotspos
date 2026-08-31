@@ -61,6 +61,7 @@ export async function queueOfflineSale(params: {
     total: total.toFixed(2),
     createdAt,
     branchName: "",
+    registerName: "",
     cashierName: "",
     organizationName: "",
     items: params.items.map((i) => ({

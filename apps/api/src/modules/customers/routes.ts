@@ -1,6 +1,8 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  customerCreditUpdateSchema,
+  customerListQuerySchema,
   customerLoginSchema,
   customerProfileUpdateSchema,
   customerRegisterSchema,
@@ -9,7 +11,16 @@ import { env } from "../../config/env.js";
 import { UnauthorizedError } from "../../shared/errors.js";
 import { clearCustomerCookie, setCustomerCookie } from "./cookie.js";
 import { deleteCustomerSession, resolveCustomerSession } from "./session.service.js";
-import { loginCustomer, registerCustomer, toSessionCustomer, updateCustomerProfile } from "./service.js";
+import { requireAuth, requirePermission } from "../../middleware/auth.js";
+import {
+  getCustomerDetail,
+  listCustomers,
+  loginCustomer,
+  registerCustomer,
+  toSessionCustomer,
+  updateCustomerCredit,
+  updateCustomerProfile,
+} from "./service.js";
 
 /**
  * Adjunta `request.customerContext` leyendo la cookie de cliente. Igual que
@@ -93,4 +104,45 @@ export async function registerCustomerRoutes(app: FastifyInstance) {
     clearCustomerCookie(reply);
     return { success: true };
   });
+}
+
+/**
+ * Rutas de clientes que solo ve el personal (mostrador y panel). Viven en el
+ * mismo módulo que las públicas pero exigen sesión de personal — un cliente
+ * final jamás puede pasar `requireAuth` porque su contexto no tiene `role`.
+ * El aislamiento por organización sale siempre de la sesión, nunca del body.
+ */
+export async function registerStaffCustomerRoutes(app: FastifyInstance) {
+  app.get(
+    "/customers",
+    { preHandler: [requireAuth, requirePermission("customers.view")] },
+    async (request) => {
+      const query = customerListQuerySchema.parse(request.query);
+      const page = await listCustomers(request.authContext!.organizationId, query);
+      return page;
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/customers/:id",
+    { preHandler: [requireAuth, requirePermission("customers.view")] },
+    async (request) => {
+      const customer = await getCustomerDetail(request.authContext!.organizationId, request.params.id);
+      return { customer };
+    },
+  );
+
+  app.patch<{ Params: { id: string } }>(
+    "/customers/:id/credit",
+    { preHandler: [requireAuth, requirePermission("customers.manage")] },
+    async (request) => {
+      const input = customerCreditUpdateSchema.parse(request.body);
+      const customer = await updateCustomerCredit(
+        request.authContext!.organizationId,
+        request.params.id,
+        input,
+      );
+      return { customer };
+    },
+  );
 }

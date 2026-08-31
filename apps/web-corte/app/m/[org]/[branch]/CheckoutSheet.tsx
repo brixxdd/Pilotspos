@@ -30,6 +30,8 @@ export function CheckoutSheet({
   onEmpty,
   onClose,
   onSend,
+  sending = false,
+  sendError = null,
 }: {
   selection: SelectionEntry[];
   total: number;
@@ -43,6 +45,8 @@ export function CheckoutSheet({
   onEmpty: () => void;
   onClose: () => void;
   onSend: (payment: { choice: PaymentChoice; creditAmount: number; cashAmount: number }) => void;
+  sending?: boolean;
+  sendError?: string | null;
 }) {
   const availableCredit = customer?.availableCredit ?? 0;
   const hasCredit = availableCredit > 0;
@@ -275,8 +279,8 @@ export function CheckoutSheet({
                 {formatQ(split.credit)} a su cuenta + {formatQ(split.cash)} en efectivo
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                El crédito todavía no queda apartado: el mostrador lo confirma cuando pesa el
-                pedido, y ahí puede cambiar el monto.
+                Su pedido queda registrado con {formatQ(split.credit)} a su cuenta. El mostrador
+                confirma el monto cuando pesa la carne y ahí puede ajustarlo.
               </p>
             </div>
           )}
@@ -331,16 +335,31 @@ export function CheckoutSheet({
               </p>
             </div>
           ) : (
+          <>
+            {sendError ? (
+              <p
+                role="alert"
+                className="mb-3 rounded-2xl border border-danger/30 bg-danger/[0.08] px-4 py-3 text-sm font-medium text-danger"
+              >
+                {sendError}
+              </p>
+            ) : null}
           <button
             type="button"
+            disabled={sending}
             onClick={() => onSend({ choice, creditAmount: split.credit, cashAmount: split.cash })}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-[15px] font-semibold text-white shadow-lg shadow-accent/25 transition-all duration-200 hover:bg-accent-hover active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-[15px] font-semibold text-white shadow-lg shadow-accent/25 transition-all duration-200 hover:bg-accent-hover active:scale-[0.98] disabled:opacity-60"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.13c-.25.69-1.45 1.32-1.99 1.36-.53.05-1.03.24-3.47-.72-2.92-1.15-4.78-4.14-4.93-4.33-.14-.19-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36.19 0 .39 0 .56.01.18.01.42-.07.66.5.25.58.83 2.01.9 2.16.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.37-.42.49-.14.14-.28.29-.12.57.16.29.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.28.14.44.12.6-.07.17-.19.7-.81.88-1.09.19-.29.37-.24.63-.14.25.09 1.61.76 1.89.9.28.14.46.21.53.33.07.12.07.69-.18 1.38Z" />
-            </svg>
-            Enviar pedido por WhatsApp
+            {sending ? (
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm5.8 14.13c-.25.69-1.45 1.32-1.99 1.36-.53.05-1.03.24-3.47-.72-2.92-1.15-4.78-4.14-4.93-4.33-.14-.19-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36.19 0 .39 0 .56.01.18.01.42-.07.66.5.25.58.83 2.01.9 2.16.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.37-.42.49-.14.14-.28.29-.12.57.16.29.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.28.14.44.12.6-.07.17-.19.7-.81.88-1.09.19-.29.37-.24.63-.14.25.09 1.61.76 1.89.9.28.14.46.21.53.33.07.12.07.69-.18 1.38Z" />
+              </svg>
+            )}
+            {sending ? "Registrando su pedido…" : "Enviar pedido por WhatsApp"}
           </button>
+          </>
           )}
         </footer>
       </div>

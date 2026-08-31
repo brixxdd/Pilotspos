@@ -1,8 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db, schema } from "../../shared/db.js";
 import { ConflictError, NotFoundError, UnauthorizedError } from "../../shared/errors.js";
 import { fromQuantity } from "../../shared/numeric.js";
+import type { CustomerListQuery, CustomerCreditUpdateInput } from "@pilotspos/validation";
+import type { CustomerListItem, Paginated } from "@pilotspos/types";
 import type { SessionCustomer } from "@pilotspos/types";
 import type {
   CustomerLoginInput,
@@ -201,4 +203,117 @@ export async function updateCustomerProfile(
     organizationId: updated.organizationId,
     organizationName: organization?.name ?? "",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Vista del personal (mostrador y panel) — requirePermission("customers.view")
+// ---------------------------------------------------------------------------
+
+function toCustomerListItem(row: typeof schema.customers.$inferSelect): CustomerListItem {
+  const creditLimit = fromQuantity(row.creditLimit);
+  const balance = fromQuantity(row.balance);
+  return {
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    fullName: `${row.firstName} ${row.lastName}`.trim(),
+    phone: row.phone,
+    addressLine: row.addressLine,
+    addressReferences: row.addressReferences,
+    creditLimit,
+    balance,
+    availableCredit: availableCredit(creditLimit, balance),
+    active: row.active,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+const CUSTOMER_DEFAULT_PAGE_SIZE = 30;
+
+/**
+ * Lista los clientes de la organización, con búsqueda por nombre o teléfono.
+ * El teléfono guardado está normalizado a 8 dígitos, así que la búsqueda
+ * también normaliza el texto antes de comparar.
+ */
+export async function listCustomers(
+  organizationId: string,
+  options: CustomerListQuery = {},
+): Promise<Paginated<CustomerListItem>> {
+  const page = Math.max(options.page ?? 1, 1);
+  const pageSize = Math.min(options.pageSize ?? CUSTOMER_DEFAULT_PAGE_SIZE, 100);
+  const search = options.search?.trim().replace(/[\s-]/g, "") ?? "";
+
+  const conditions = [eq(schema.customers.organizationId, organizationId)];
+  if (search) {
+    conditions.push(
+      or(
+        ilike(schema.customers.firstName, `%${search}%`),
+        ilike(schema.customers.lastName, `%${search}%`),
+        ilike(schema.customers.phone, `%${search}%`),
+      )!,
+    );
+  }
+
+  const whereClause = and(...conditions);
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.customers)
+    .where(whereClause);
+  const count = countRows[0]?.count ?? 0;
+
+  const rows = await db
+    .select()
+    .from(schema.customers)
+    .where(whereClause)
+    .orderBy(asc(schema.customers.lastName), asc(schema.customers.firstName))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return { items: rows.map(toCustomerListItem), total: count, page, pageSize };
+}
+
+export async function getCustomerDetail(organizationId: string, id: string): Promise<CustomerListItem> {
+  const [row] = await db
+    .select()
+    .from(schema.customers)
+    .where(and(eq(schema.customers.id, id), eq(schema.customers.organizationId, organizationId)))
+    .limit(1);
+  if (!row) throw new NotFoundError("Cliente no encontrado");
+  return toCustomerListItem(row);
+}
+
+/**
+ * El mostrador fija el techo del fiado y/o mueve el saldo (un abono del cliente
+ * es un ajuste negativo). El saldo nunca se deja en negativo: si el cliente
+ * abona de más, el excedente simplemente se ignora y se cierra en 0.
+ */
+export async function updateCustomerCredit(
+  organizationId: string,
+  id: string,
+  input: CustomerCreditUpdateInput,
+): Promise<CustomerListItem> {
+  const [existing] = await db
+    .select()
+    .from(schema.customers)
+    .where(and(eq(schema.customers.id, id), eq(schema.customers.organizationId, organizationId)))
+    .limit(1);
+  if (!existing) throw new NotFoundError("Cliente no encontrado");
+
+  const currentBalance = fromQuantity(existing.balance);
+  const adjustment = input.balanceAdjustment ?? 0;
+  const nextBalance = Math.max(0, currentBalance + adjustment);
+
+  const [updated] = await db
+    .update(schema.customers)
+    .set({
+      ...(input.creditLimit !== undefined ? { creditLimit: input.creditLimit.toFixed(2) } : {}),
+      ...(input.balanceAdjustment !== undefined ? { balance: nextBalance.toFixed(2) } : {}),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.customers.id, id), eq(schema.customers.organizationId, organizationId)))
+    .returning();
+
+  if (!updated) throw new NotFoundError("Cliente no encontrado");
+  return toCustomerListItem(updated);
 }

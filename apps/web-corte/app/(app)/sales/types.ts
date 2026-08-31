@@ -29,6 +29,7 @@ export interface SaleTicket {
   total: string;
   createdAt: string;
   branchName: string;
+  registerName: string;
   cashierName: string;
   organizationName: string;
   items: { productName: string; unitPrice: string; quantity: number; subtotal: string }[];

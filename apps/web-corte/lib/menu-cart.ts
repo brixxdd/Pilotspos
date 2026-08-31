@@ -20,7 +20,7 @@ export interface StoredLine {
   price: number;
 }
 
-interface StoredCart {
+export interface StoredCart {
   v: number;
   updatedAt: number;
   items: Record<string, StoredLine>;

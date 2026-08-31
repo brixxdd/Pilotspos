@@ -204,12 +204,14 @@ export async function getSaleById(organizationId: string, saleId: string) {
       createdAt: schema.sales.createdAt,
       branchId: schema.sales.branchId,
       branchName: schema.branches.name,
+      registerName: schema.registers.name,
       cashierName: schema.users.fullName,
       organizationName: schema.organizations.name,
     })
     .from(schema.sales)
     .innerJoin(schema.branches, eq(schema.branches.id, schema.sales.branchId))
     .innerJoin(schema.users, eq(schema.users.id, schema.sales.userId))
+    .innerJoin(schema.registers, eq(schema.registers.id, schema.sales.registerId))
     .innerJoin(schema.organizations, eq(schema.organizations.id, schema.sales.organizationId))
     .where(and(eq(schema.sales.id, saleId), eq(schema.sales.organizationId, organizationId)))
     .limit(1);
@@ -223,15 +225,20 @@ export async function getSaleById(organizationId: string, saleId: string) {
 
 export async function listSales(
   organizationId: string,
-  options: { page?: number; pageSize?: number } = {},
+  options: { page?: number; pageSize?: number; userId?: string } = {},
 ) {
   const page = Math.max(options.page ?? 1, 1);
   const pageSize = Math.min(options.pageSize ?? 30, 100);
 
+  const conditions = [eq(schema.sales.organizationId, organizationId)];
+  if (options.userId) conditions.push(eq(schema.sales.userId, options.userId));
+
+  const whereClause = and(...conditions);
+
   const countRows = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.sales)
-    .where(eq(schema.sales.organizationId, organizationId));
+    .where(whereClause);
 
   const items = await db
     .select({
@@ -244,7 +251,7 @@ export async function listSales(
     })
     .from(schema.sales)
     .innerJoin(schema.users, eq(schema.users.id, schema.sales.userId))
-    .where(eq(schema.sales.organizationId, organizationId))
+    .where(whereClause)
     .orderBy(desc(schema.sales.createdAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize);

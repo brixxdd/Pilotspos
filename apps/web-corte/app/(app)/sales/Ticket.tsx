@@ -7,14 +7,20 @@ const METHOD_LABELS: Record<string, string> = {
   MIXED: "Pago mixto",
 };
 
+/** La carne se marca en libras (fracciones); lo empacado en piezas (enteros). */
+function formatQuantity(quantity: number): string {
+  return Number.isInteger(quantity) ? `${quantity}` : `${quantity.toFixed(3)} lb`;
+}
+
 export function Ticket({ sale }: { sale: SaleTicket }) {
   return (
     <div className="mx-auto w-full max-w-[300px] font-mono text-xs text-ink print:max-w-none">
       <div className="text-center">
         <p className="text-sm font-bold">{sale.organizationName}</p>
         <p>{sale.branchName}</p>
-        <p>{new Date(sale.createdAt).toLocaleString("es-MX")}</p>
-        <p>Cajero: {sale.cashierName}</p>
+        <p>{new Date(sale.createdAt).toLocaleString("es-GT")}</p>
+        <p>Caja: {sale.registerName}</p>
+        <p>Atendido por: {sale.cashierName}</p>
         <p>Venta: {sale.saleNumber}</p>
       </div>
 
@@ -32,7 +38,7 @@ export function Ticket({ sale }: { sale: SaleTicket }) {
           {sale.items.map((item, index) => (
             <tr key={index}>
               <td>{item.productName}</td>
-              <td className="text-right">{item.quantity}</td>
+              <td className="text-right">{formatQuantity(item.quantity)}</td>
               <td className="text-right">${Number(item.subtotal).toFixed(2)}</td>
             </tr>
           ))}

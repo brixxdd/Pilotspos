@@ -1,7 +1,7 @@
 import { and, asc, eq, exists, ilike, or, sql } from "drizzle-orm";
 import { db, schema } from "../../shared/db.js";
 import { ConflictError, NotFoundError } from "../../shared/errors.js";
-import type { ProductCreateInput, ProductUpdateInput } from "@pilotspos/validation";
+import type { ProductCreateInput, ProductImportRow, ProductUpdateInput } from "@pilotspos/validation";
 import type { Paginated } from "@pilotspos/types";
 import { fromQuantity, toQuantity } from "../../shared/numeric.js";
 
@@ -322,4 +322,143 @@ export async function deactivateProduct(organizationId: string, id: string) {
     .returning({ id: schema.products.id });
   if (!updated) throw new NotFoundError("Producto no encontrado");
   return getProductById(organizationId, id);
+}
+
+// ---------------------------------------------------------------------------
+// Importación masiva (CSV/Excel)
+// ---------------------------------------------------------------------------
+
+interface ImportError {
+  row: number;
+  message: string;
+}
+
+/**
+ * Importa un lote de productos en una sola pasada. Cada fila se valida contra
+ * el mismo schema que el alta manual, la categoría se resuelve por nombre (se
+ * crea si no existe) y se avisan los conflictos de SKU/código de barras por
+ * fila — se importan las filas válidas y se reportan las que no, sin echar
+ * atrás el lote completo.
+ */
+export async function importProducts(
+  params: { organizationId: string; branchId: string | null; userId: string },
+  rows: ProductImportRow[],
+): Promise<{ imported: number; errors: ImportError[] }> {
+  const errors: ImportError[] = [];
+  let imported = 0;
+
+  // Catálogo actual para detectar conflictos reales (no solo dentro del lote).
+  const existingSkus = await db
+    .select({ sku: schema.products.sku })
+    .from(schema.products)
+    .where(eq(schema.products.organizationId, params.organizationId));
+  const existingSkuSet = new Set(existingSkus.map((row) => row.sku.toLowerCase()));
+
+  const existingBarcodes = await db
+    .select({ barcode: schema.productBarcodes.barcode })
+    .from(schema.productBarcodes)
+    .innerJoin(schema.products, eq(schema.products.id, schema.productBarcodes.productId))
+    .where(eq(schema.products.organizationId, params.organizationId));
+  const existingBarcodeSet = new Set(existingBarcodes.map((row) => row.barcode));
+
+  // Categorías existentes, por nombre en minúsculas para tolerar diferencias de caja.
+  const categoryRows = await db
+    .select({ id: schema.categories.id, name: schema.categories.name })
+    .from(schema.categories)
+    .where(eq(schema.categories.organizationId, params.organizationId));
+  const categoryByName = new Map(
+    categoryRows.map((row) => [row.name.toLowerCase(), row.id] as const),
+  );
+
+  // Lo que ya quedó insertado en este mismo lote, para no chocar consigo mismo.
+  const batchSkus = new Set<string>();
+  const batchBarcodes = new Set<string>();
+
+  for (const [index, row] of rows.entries()) {
+    const rowNumber = index + 1;
+    const fail = (message: string) => errors.push({ row: rowNumber, message });
+
+    const skuKey = row.sku.toLowerCase();
+    if (existingSkuSet.has(skuKey) || batchSkus.has(skuKey)) {
+      fail(`El SKU "${row.sku}" ya está en uso`);
+      continue;
+    }
+
+    const conflictingBarcode = row.barcodes.find(
+      (barcode) => existingBarcodeSet.has(barcode) || batchBarcodes.has(barcode),
+    );
+    if (conflictingBarcode) {
+      fail(`El código de barras ${conflictingBarcode} ya está asignado a otro producto`);
+      continue;
+    }
+
+    let categoryId: string | null = null;
+    if (row.categoryName) {
+      const existing = categoryByName.get(row.categoryName.toLowerCase());
+      if (existing) {
+        categoryId = existing;
+      } else {
+        const [created] = await db
+          .insert(schema.categories)
+          .values({ organizationId: params.organizationId, name: row.categoryName.trim() })
+          .returning({ id: schema.categories.id });
+        if (!created) {
+          fail(`No se pudo crear la categoría "${row.categoryName}"`);
+          continue;
+        }
+        categoryId = created.id;
+        categoryByName.set(row.categoryName.toLowerCase(), created.id);
+      }
+    }
+
+    try {
+      await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(schema.products)
+          .values({
+            organizationId: params.organizationId,
+            name: row.name,
+            description: row.description ?? null,
+            sku: row.sku,
+            price: row.price.toFixed(2),
+            cost: row.cost.toFixed(2),
+            unit: row.unit,
+            stock: toQuantity(row.stock),
+            minimumStock: toQuantity(row.minimumStock),
+            categoryId,
+            active: row.active,
+          })
+          .returning();
+        if (!created) throw new Error("No se pudo crear el producto");
+
+        if (row.barcodes.length > 0) {
+          await tx
+            .insert(schema.productBarcodes)
+            .values(row.barcodes.map((barcode) => ({ productId: created.id, barcode })));
+        }
+
+        if (row.stock > 0 && params.branchId) {
+          await tx.insert(schema.inventoryMovements).values({
+            organizationId: params.organizationId,
+            branchId: params.branchId,
+            productId: created.id,
+            type: "INITIAL_STOCK",
+            quantity: toQuantity(row.stock),
+            userId: params.userId,
+            note: "Stock inicial por importación de catálogo",
+          });
+        }
+
+        return created;
+      });
+
+      batchSkus.add(skuKey);
+      for (const barcode of row.barcodes) batchBarcodes.add(barcode);
+      imported += 1;
+    } catch {
+      fail(`No se pudo guardar "${row.name}" — revisa los valores e inténtalo de nuevo`);
+    }
+  }
+
+  return { imported, errors };
 }

@@ -6,6 +6,7 @@ import type { UserRole } from "@pilotspos/types";
 import { Badge, Button, DataTable, Modal, PageHeader, SearchInput } from "@pilotspos/ui";
 import { apiFetch, ApiClientError } from "@/lib/api-client";
 import { ProductForm } from "./ProductForm";
+import { ImportModal } from "./ImportModal";
 import type { CategoryRow, ProductRow } from "./types";
 
 export function ProductsClient({
@@ -27,6 +28,7 @@ export function ProductsClient({
     open: false,
     editing: null,
   });
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -79,6 +81,15 @@ export function ProductsClient({
     setModalState({ open: false, editing: null });
   }
 
+  async function reloadCatalog() {
+    try {
+      const { items } = await apiFetch<{ items: ProductRow[] }>(`/products?pageSize=100`);
+      setProducts(items);
+    } catch {
+      // la lista se refresca con la siguiente búsqueda
+    }
+  }
+
   async function handleDeactivate(product: ProductRow) {
     if (!confirm(`¿Desactivar "${product.name}"?`)) return;
     try {
@@ -96,7 +107,12 @@ export function ProductsClient({
         description="Catálogo de productos, precios, stock y códigos de barras."
         actions={
           canManage ? (
-            <Button onClick={() => setModalState({ open: true, editing: null })}>Nuevo producto</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                Importar
+              </Button>
+              <Button onClick={() => setModalState({ open: true, editing: null })}>Nuevo producto</Button>
+            </div>
           ) : undefined
         }
       />
@@ -176,6 +192,12 @@ export function ProductsClient({
           submitLabel={modalState.editing ? "Guardar cambios" : "Crear producto"}
         />
       </Modal>
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={reloadCatalog}
+      />
     </div>
   );
 }
