@@ -1,0 +1,1 @@
+ALTER TABLE "menu_orders" ADD COLUMN "customer_confirmed_at" timestamp with time zone;

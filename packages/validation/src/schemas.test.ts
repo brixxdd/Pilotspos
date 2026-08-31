@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   customerCreditUpdateSchema,
   customerPhoneSchema,
+  deliveryConfirmSchema,
+  deliveryReceivedSchema,
   menuOrderCreateSchema,
   productCreateSchema,
   productImportRowSchema,
@@ -86,5 +88,18 @@ describe("productImportRowSchema", () => {
     });
     expect(parsed.success).toBe(true);
     expect(parsed.success && "categoryName" in parsed.data).toBe(true);
+  });
+});
+
+describe("deliveryConfirmSchema / deliveryReceivedSchema", () => {
+  it("acepta token y teléfono normalizado", () => {
+    const input = { token: "x".repeat(24), phone: "5512 3456" };
+    expect(deliveryConfirmSchema.parse(input).phone).toBe("55123456");
+    expect(deliveryReceivedSchema.parse(input).phone).toBe("55123456");
+  });
+
+  it("rechaza tokens cortos", () => {
+    expect(deliveryConfirmSchema.safeParse({ token: "corto", phone: "55123456" }).success).toBe(false);
+    expect(deliveryReceivedSchema.safeParse({ token: "corto", phone: "55123456" }).success).toBe(false);
   });
 });

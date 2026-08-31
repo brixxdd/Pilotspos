@@ -377,6 +377,7 @@ export interface MenuOrderItem {
 export interface MenuOrder {
   id: UUID;
   organizationId: UUID;
+  organizationName: string | null;
   branchId: UUID;
   branchName: string | null;
   orderNumber: string;
@@ -401,6 +402,8 @@ export interface MenuOrder {
   driverId: UUID | null;
   driverName: string | null;
   deliveredAt: ISODateString | null;
+  /** Confirmación del cliente al recibir. `null` = entregado pero sin confirmar por el cliente. */
+  customerConfirmedAt: ISODateString | null;
   createdAt: ISODateString;
 }
 

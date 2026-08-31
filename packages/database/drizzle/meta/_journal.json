@@ -50,6 +50,13 @@
       "when": 1788137253074,
       "tag": "0006_flimsy_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788139369215,
+      "tag": "0007_stormy_frog_thor",
+      "breakpoints": true
     }
   ]
 }

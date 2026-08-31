@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import type { MenuOrder } from "@pilotspos/types";
 import { Button, Modal } from "@pilotspos/ui";
+import { DeliveryTicket } from "./DeliveryTicket";
 
 export function DeliveryQRModal({ order, onClose }: { order: MenuOrder | null; onClose: () => void }) {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -29,37 +30,26 @@ export function DeliveryQRModal({ order, onClose }: { order: MenuOrder | null; o
   }, [order]);
 
   return (
-    <Modal open={Boolean(order)} onClose={onClose} title={`Entrega · ${order?.orderNumber ?? ""}`} size="sm">
+    <Modal open={Boolean(order)} onClose={onClose} title={`Ticket de entrega · ${order?.orderNumber ?? ""}`} size="sm">
       {order ? (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col gap-4">
           {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-          <div id="delivery-qr-area" className="flex flex-col items-center gap-3 rounded-md border border-line bg-white p-4">
-            {qrUrl ? (
-              <img src={qrUrl} alt="QR de entrega" width={240} height={240} className="h-56 w-56" />
-            ) : (
-              <div className="h-56 w-56 animate-pulse rounded-md bg-app" />
-            )}
-            <p className="font-mono text-sm font-bold text-ink">{order.orderNumber}</p>
-            <p className="text-center text-xs leading-relaxed text-muted">
-              {order.customerName} · {order.customerPhone}
-              {order.addressLine ? <br /> : null}
-              {order.addressLine}
-              {order.addressReferences ? <span className="block">{order.addressReferences}</span> : null}
-            </p>
+          <div id="delivery-qr-area" className="rounded-md border border-line bg-white p-4">
+            <DeliveryTicket order={order} qrUrl={qrUrl} />
           </div>
 
           <p className="text-center text-xs leading-relaxed text-muted">
-            El repartidor escanea este QR al recoger el pedido y confirma la entrega con su
-            teléfono. Así queda registrado quién entregó y a qué hora.
+            Se imprime al confirmar el pedido: el repartidor lleva este ticket y escanea el QR
+            para registrar la entrega. El cliente confirma la recepción con el mismo QR.
           </p>
 
-          <div className="flex w-full justify-end gap-2 print:hidden">
+          <div className="flex justify-end gap-2 print:hidden">
             <Button variant="ghost" onClick={onClose}>
               Cerrar
             </Button>
             <Button onClick={() => window.print()} disabled={!qrUrl}>
-              Imprimir QR
+              Imprimir ticket
             </Button>
           </div>
         </div>

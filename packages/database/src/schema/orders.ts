@@ -70,6 +70,12 @@ export const menuOrders = pgTable(
     /** Repartidor que confirmó la entrega (debe ser activo en la organización). */
     driverId: uuid("driver_id").references(() => drivers.id, { onDelete: "set null" }),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    /**
+     * Confirmación del CLIENTE al recibir. Doble cara del anti-robo: el
+     * repartidor confirma que entregó y el cliente confirma que recibió.
+     * Sin esto (entregado sin recibido) el mostrador puede hacer seguimiento.
+     */
+    customerConfirmedAt: timestamp("customer_confirmed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

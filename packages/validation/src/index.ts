@@ -328,6 +328,13 @@ export const deliveryConfirmSchema = z.object({
 });
 export type DeliveryConfirmInput = z.infer<typeof deliveryConfirmSchema>;
 
+/** Confirmación del CLIENTE al recibir: el teléfono debe ser el del pedido. */
+export const deliveryReceivedSchema = z.object({
+  token: z.string().min(16).max(64),
+  phone: customerPhoneSchema,
+});
+export type DeliveryReceivedInput = z.infer<typeof deliveryReceivedSchema>;
+
 // ---------------------------------------------------------------------------
 // Organizaciones / sucursales / cajas registradoras
 // ---------------------------------------------------------------------------

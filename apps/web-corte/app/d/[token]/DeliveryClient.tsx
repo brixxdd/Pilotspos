@@ -17,6 +17,7 @@ interface PublicDelivery {
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   driverName: string | null;
   deliveredAt: string | null;
+  customerConfirmedAt: string | null;
 }
 
 const decimals = new Intl.NumberFormat("es-GT", {
@@ -75,6 +76,27 @@ export function DeliveryClient({ token }: { token: string }) {
     }
   }
 
+  async function confirmReceived() {
+    const normalized = phone.replace(/[\s-]/g, "");
+    if (!/^\d{8}$/.test(normalized)) {
+      setError("Escribe tu teléfono a 8 dígitos (ej. 5512 3456)");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updated = await apiFetch<PublicDelivery>("/public/deliveries/received", {
+        method: "POST",
+        body: JSON.stringify({ token, phone: normalized }),
+      });
+      setDelivery(updated);
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "No se pudo confirmar la recepción");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-app px-4">
@@ -100,6 +122,7 @@ export function DeliveryClient({ token }: { token: string }) {
   if (!delivery) return null;
 
   const delivered = Boolean(delivery.deliveredAt);
+  const customerConfirmed = Boolean(delivery.customerConfirmedAt);
   const actionable = delivery.status === "CONFIRMED" || delivery.status === "COMPLETED";
 
   return (
@@ -110,15 +133,55 @@ export function DeliveryClient({ token }: { token: string }) {
           <p className="mt-1 text-sm text-muted">{delivery.branchName}</p>
         </header>
 
-        {delivered ? (
+        {delivered && customerConfirmed ? (
           <div className="rounded-2xl border border-success/30 bg-success/[0.08] p-5 text-center">
-            <p className="text-3xl">✓</p>
+            <p className="text-3xl">✓✓</p>
             <p className="mt-1 text-sm font-semibold text-ink">Entrega confirmada</p>
             <p className="mt-1 text-xs leading-relaxed text-muted">
-              {delivery.driverName ?? "El repartidor"} registró esta entrega el{" "}
-              {delivery.deliveredAt ? new Date(delivery.deliveredAt).toLocaleString("es-GT") : ""}.
+              {delivery.driverName ?? "El repartidor"} registró la entrega y el cliente confirmó
+              que la recibió.
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              {delivery.deliveredAt ? `Entregado ${new Date(delivery.deliveredAt).toLocaleString("es-GT")}` : ""}
             </p>
           </div>
+        ) : delivered ? (
+          <>
+            <div className="rounded-2xl border border-success/30 bg-success/[0.08] p-4 text-center">
+              <p className="text-3xl">✓</p>
+              <p className="mt-1 text-sm font-semibold text-ink">Entregado por {delivery.driverName ?? "el repartidor"}</p>
+              <p className="mt-1 text-xs text-muted">
+                {delivery.deliveredAt ? new Date(delivery.deliveredAt).toLocaleString("es-GT") : ""}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-line bg-surface p-5">
+              <p className="text-sm font-semibold text-ink">¿Recibiste tu pedido?</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                Confirma con tu teléfono para cerrar la entrega. Si no eres {delivery.customerName},
+                pídele al repartidor que no registre nada a tu nombre.
+              </p>
+              <label className="mt-3 block">
+                <span className="text-xs font-medium text-ink">Tu teléfono</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="5512 3456"
+                  className="mt-1 w-full rounded-xl border border-line bg-app px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </label>
+              {error ? <p className="mt-2 text-xs font-medium text-danger">{error}</p> : null}
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={confirmReceived}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-6 py-4 text-[15px] font-semibold text-white shadow-lg shadow-accent/25 transition-all duration-200 hover:bg-accent-hover active:scale-[0.98] disabled:opacity-60"
+              >
+                {submitting ? "Registrando…" : "Sí, recibí mi pedido"}
+              </button>
+            </div>
+          </>
         ) : actionable ? (
           <div className="rounded-2xl border border-line bg-surface p-5">
             <p className="text-sm font-semibold text-ink">Confirmar entrega</p>

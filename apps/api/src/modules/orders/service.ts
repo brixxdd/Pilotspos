@@ -27,11 +27,17 @@ function generateDeliveryToken(): string {
 
 function toMenuOrder(
   row: typeof schema.menuOrders.$inferSelect,
-  extras: { branchName?: string | null; resolvedByName?: string | null; driverName?: string | null } = {},
+  extras: {
+    branchName?: string | null;
+    resolvedByName?: string | null;
+    driverName?: string | null;
+    organizationName?: string | null;
+  } = {},
 ): MenuOrder {
   return {
     id: row.id,
     organizationId: row.organizationId,
+    organizationName: extras.organizationName ?? null,
     branchId: row.branchId,
     branchName: extras.branchName ?? null,
     orderNumber: row.orderNumber,
@@ -60,6 +66,7 @@ function toMenuOrder(
     driverId: row.driverId,
     driverName: extras.driverName ?? null,
     deliveredAt: row.deliveredAt ? row.deliveredAt.toISOString() : null,
+    customerConfirmedAt: row.customerConfirmedAt ? row.customerConfirmedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -210,9 +217,11 @@ export async function listOrders(
       branchName: schema.branches.name,
       resolvedByName: schema.users.fullName,
       driverName: schema.drivers.name,
+      organizationName: schema.organizations.name,
     })
     .from(schema.menuOrders)
     .innerJoin(schema.branches, eq(schema.branches.id, schema.menuOrders.branchId))
+    .innerJoin(schema.organizations, eq(schema.organizations.id, schema.menuOrders.organizationId))
     .leftJoin(schema.users, eq(schema.users.id, schema.menuOrders.resolvedById))
     .leftJoin(schema.drivers, eq(schema.drivers.id, schema.menuOrders.driverId))
     .where(whereClause)
@@ -220,8 +229,8 @@ export async function listOrders(
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 
-  const items = rows.map(({ order, branchName, resolvedByName, driverName }) =>
-    toMenuOrder(order, { branchName, resolvedByName, driverName }),
+  const items = rows.map(({ order, branchName, resolvedByName, driverName, organizationName }) =>
+    toMenuOrder(order, { branchName, resolvedByName, driverName, organizationName }),
   );
 
   return { items, total: count, page, pageSize };
@@ -234,9 +243,11 @@ export async function getOrderById(organizationId: string, id: string) {
       branchName: schema.branches.name,
       resolvedByName: schema.users.fullName,
       driverName: schema.drivers.name,
+      organizationName: schema.organizations.name,
     })
     .from(schema.menuOrders)
     .innerJoin(schema.branches, eq(schema.branches.id, schema.menuOrders.branchId))
+    .innerJoin(schema.organizations, eq(schema.organizations.id, schema.menuOrders.organizationId))
     .leftJoin(schema.users, eq(schema.users.id, schema.menuOrders.resolvedById))
     .leftJoin(schema.drivers, eq(schema.drivers.id, schema.menuOrders.driverId))
     .where(and(eq(schema.menuOrders.id, id), eq(schema.menuOrders.organizationId, organizationId)))
@@ -247,6 +258,7 @@ export async function getOrderById(organizationId: string, id: string) {
     branchName: row.branchName,
     resolvedByName: row.resolvedByName,
     driverName: row.driverName,
+    organizationName: row.organizationName,
   });
 }
 

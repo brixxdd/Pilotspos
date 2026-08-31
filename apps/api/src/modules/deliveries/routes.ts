@@ -1,9 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { deliveryConfirmSchema, driverCreateSchema, driverUpdateSchema } from "@pilotspos/validation";
+import {
+  deliveryConfirmSchema,
+  deliveryReceivedSchema,
+  driverCreateSchema,
+  driverUpdateSchema,
+} from "@pilotspos/validation";
 import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import {
   confirmDelivery,
+  confirmReceived,
   createDriver,
   getPublicDelivery,
   listDrivers,
@@ -36,6 +42,15 @@ export async function registerDeliveryRoutes(app: FastifyInstance) {
     async (request) => {
       const input = deliveryConfirmSchema.parse(request.body);
       return confirmDelivery(input);
+    },
+  );
+
+  app.post(
+    "/public/deliveries/received",
+    { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } },
+    async (request) => {
+      const input = deliveryReceivedSchema.parse(request.body);
+      return confirmReceived(input);
     },
   );
 

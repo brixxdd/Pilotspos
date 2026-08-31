@@ -76,6 +76,10 @@ export function OrdersClient({ canManage }: { canManage: boolean }) {
         body: JSON.stringify({ status }),
       });
       setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)));
+      // Al confirmar nace el QR: se abre el ticket de entrega para imprimirlo de una.
+      if (status === "CONFIRMED" && updated.deliveryToken) {
+        setQrOrder(updated);
+      }
     } catch (err) {
       alert(err instanceof ApiClientError ? err.message : "No se pudo actualizar el pedido");
     }
@@ -180,17 +184,28 @@ export function OrdersClient({ canManage }: { canManage: boolean }) {
                 ) : null}
 
                 {order.deliveredAt ? (
-                  <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success">
-                    <span>✓</span> Entregado por {order.driverName ?? "repartidor"} ·{" "}
-                    {order.deliveredAt ? formatTime(order.deliveredAt) : ""}
-                  </p>
+                  <div className="mt-3 space-y-2">
+                    <p className="inline-flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success">
+                      <span>✓</span> Entregado por {order.driverName ?? "repartidor"} ·{" "}
+                      {order.deliveredAt ? formatTime(order.deliveredAt) : ""}
+                    </p>
+                    {order.customerConfirmedAt ? (
+                      <p className="inline-flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-sm text-success">
+                        <span>✓✓</span> Confirmado por el cliente · {formatTime(order.customerConfirmedAt)}
+                      </p>
+                    ) : (
+                      <p className="inline-flex items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-sm text-warning">
+                        Entregado sin confirmar por el cliente — repite el QR con él.
+                      </p>
+                    )}
+                  </div>
                 ) : order.deliveryToken && (order.status === "CONFIRMED" || order.status === "COMPLETED") ? (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-app px-3 py-2">
                     <p className="text-sm text-muted">
-                      Sin entregar aún. Imprime el QR para el repartidor.
+                      Sin entregar aún. Imprime el ticket de entrega para el repartidor.
                     </p>
                     <Button variant="secondary" size="sm" onClick={() => setQrOrder(order)}>
-                      QR de entrega
+                      Ticket de entrega
                     </Button>
                   </div>
                 ) : null}

@@ -2,7 +2,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "../../shared/db.js";
 import { ConflictError, NotFoundError } from "../../shared/errors.js";
 import { fromQuantity } from "../../shared/numeric.js";
-import type { DeliveryConfirmInput, DriverCreateInput, DriverUpdateInput } from "@pilotspos/validation";
+import type {
+  DeliveryConfirmInput,
+  DeliveryReceivedInput,
+  DriverCreateInput,
+  DriverUpdateInput,
+} from "@pilotspos/validation";
 import type { Driver } from "@pilotspos/types";
 
 // ---------------------------------------------------------------------------
@@ -22,6 +27,7 @@ export interface PublicDelivery {
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   driverName: string | null;
   deliveredAt: string | null;
+  customerConfirmedAt: string | null;
 }
 
 /**
@@ -68,6 +74,9 @@ export async function getPublicDelivery(token: string): Promise<PublicDelivery> 
     status: row.order.status,
     driverName: row.driverName,
     deliveredAt: row.order.deliveredAt ? row.order.deliveredAt.toISOString() : null,
+    customerConfirmedAt: row.order.customerConfirmedAt
+      ? row.order.customerConfirmedAt.toISOString()
+      : null,
   };
 }
 
@@ -122,6 +131,41 @@ export async function confirmDelivery(input: DeliveryConfirmInput) {
   await db
     .update(schema.menuOrders)
     .set({ driverId: driver.id, deliveredAt: new Date() })
+    .where(eq(schema.menuOrders.id, row.id));
+
+  return getPublicDelivery(input.token);
+}
+
+/**
+ * El CLIENTE confirma que recibió su pedido. Segunda cara del anti-robo:
+ * el repartidor dice que entregó, el cliente dice que recibió. Requisitos:
+ * - el pedido ya fue marcado como entregado por el repartidor;
+ * - el teléfono es EXACTAMENTE el del pedido (la persona que lo ordenó).
+ * Idempotente: si ya confirmó, devuelve el mismo estado.
+ */
+export async function confirmReceived(input: DeliveryReceivedInput) {
+  const [row] = await db
+    .select()
+    .from(schema.menuOrders)
+    .where(eq(schema.menuOrders.deliveryToken, input.token))
+    .limit(1);
+
+  if (!row) throw new NotFoundError("Ese QR no corresponde a ningún pedido");
+  if (!row.deliveredAt) {
+    throw new ConflictError("El repartidor todavía no registra la entrega");
+  }
+
+  if (input.phone !== row.customerPhone) {
+    throw new ConflictError("Este teléfono no coincide con el del pedido");
+  }
+
+  if (row.customerConfirmedAt) {
+    return getPublicDelivery(input.token);
+  }
+
+  await db
+    .update(schema.menuOrders)
+    .set({ customerConfirmedAt: new Date() })
     .where(eq(schema.menuOrders.id, row.id));
 
   return getPublicDelivery(input.token);
